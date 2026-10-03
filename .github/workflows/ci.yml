@@ -1,0 +1,39 @@
+name: Sparrow CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    env:
+      N8N_BASE: https://n8n.example.com
+      N8N_ANALYSE_PATH: /analyse
+      N8N_GENERATE_PATH: /generate
+      N8N_LIVE_VIEW_PATH: /live
+      N8N_MEDIA_PATH: /media
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
+      SPARROW_LIVE_VIEW_SECRET: ci-test-secret-that-is-at-least-32-characters-long
+      SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key
+      UPSTASH_REDIS_REST_URL: ''
+      UPSTASH_REDIS_REST_TOKEN: ''
+      SENTRY_DSN: ''
+      MAINTENANCE_MODE: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Unit tests
+        run: npm test
+      - name: Production build
+        # Keep this last: it catches route, TypeScript, and CSS import regressions.
+        run: npm run build
