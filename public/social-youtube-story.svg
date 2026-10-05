@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560">
+  <rect width="800" height="560" fill="#111"/>
+  <text x="52" y="76" fill="#ff4b13" font-family="Arial, sans-serif" font-size="22" font-weight="800" letter-spacing="3">BRIEF → STORY</text>
+  <text x="52" y="138" fill="#fff" font-family="Arial, sans-serif" font-size="58" font-weight="900">FROM SOURCE</text>
+  <text x="52" y="196" fill="#fff" font-family="Arial, sans-serif" font-size="58" font-weight="900">TO STORY.</text>
+  <rect x="52" y="238" width="204" height="170" rx="14" fill="#ff4b13"/>
+  <text x="76" y="276" fill="#111" font-family="Arial, sans-serif" font-size="14" font-weight="800">01 · HOOK</text>
+  <circle cx="154" cy="345" r="42" fill="#111"/>
+  <path d="M143 321L143 369L180 345Z" fill="#fff"/>
+  <rect x="282" y="238" width="204" height="170" rx="14" fill="#f0f0ed"/>
+  <text x="306" y="276" fill="#111" font-family="Arial, sans-serif" font-size="14" font-weight="800">02 · POINT</text>
+  <path d="M312 327H454" stroke="#111" stroke-width="12" stroke-linecap="round"/>
+  <path d="M312 359H412" stroke="#777" stroke-width="12" stroke-linecap="round"/>
+  <rect x="512" y="238" width="236" height="170" rx="14" fill="#c8f169"/>
+  <text x="536" y="276" fill="#111" font-family="Arial, sans-serif" font-size="14" font-weight="800">03 · REVIEW</text>
+  <path d="M544 330L570 355L626 296" fill="none" stroke="#111" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="52" y="474" fill="#aaa" font-family="Arial, sans-serif" font-size="18">One useful idea. A clear video direction. A human final say.</text>
+</svg>
