@@ -361,12 +361,13 @@ ${data.previous_content}`,
             );
 
             data.platforms.forEach((pl) =>
-              params.append(
-                'social_media_platforms',
-                pl
-              )
-            );
+  params.append('social_media_platforms', pl)
+);
 
+params.append(
+  'selected_content_types',
+  data.platforms.join(',')
+);
             const endpoint = n8nEndpoint(
               process.env.N8N_GENERATE_PATH!
             );

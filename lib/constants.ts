@@ -1,6 +1,13 @@
-export const PLATFORMS = ['Instagram', 'Facebook', 'LinkedIn', 'X/Twitter', 'YouTube'] as const;
+export const PLATFORMS = [
+  'Instagram',
+  'Facebook',
+  'LinkedIn',
+  'X/Twitter',
+  'YouTube',
+  'Blogs',
+] as const;
 export const STYLES = ['Seth Godin','Alex Hormozi','Gary Vaynerchuk','Dan Kennedy','Russell Brunson','Tony Robbins','Grant Cardone','Jordan Belfort'] as const;
-export const SEC_META = [{key:'website',name:'Website and SEO'},{key:'social',name:'Social media'},{key:'ads',name:'Ads and messages'},{key:'blogs',name:'Blogs and video'}] as const;
+export const SEC_META = [{key:'website',name:'Website and SEO'},{key:'social',name:'Social media'},{key:'ads',name:'Ads and messages'},{key:'blogs',name:'Blog'}] as const;
 const COLORS: Record<string,[string,string]> = {
   'Instagram':['#e11d48','#fff1f2'],
   'Facebook':['#2563eb','#eff6ff'],

@@ -426,22 +426,63 @@ export default function StudioPage() {
   };
 
   const selectedPlatforms = s.prefs.platforms.map(p => p.toLowerCase());
-  const allPieces = pieces();
+const allPieces = pieces();
+
+const channels = [...new Set(allPieces.map(x => x.channel))];
+
+const blogsSelected = selectedPlatforms.includes('blogs');
   // Show only channels explicitly selected for this generation. Never leak
   // Website, Ads, Blog, or unrelated platform cards into a platform-only view.
   const filtered = allPieces.filter(p => {
-    const ch = p.channel.toLowerCase().replace(/\s+/g, ' ').trim();
-    return selectedPlatforms.some(sp => {
-      const normalized = sp.toLowerCase().replace('x/twitter','twitter').replace('x/','').trim();
-      return ch === normalized || ch.includes(normalized) || normalized.includes(ch);
-    });
-  });
+  const ch = p.channel.toLowerCase().replace(/\s+/g, ' ').trim();
 
-  const channels = [...new Set(filtered.map(x => x.channel))];
+  if (blogsSelected && p.section === 'blogs') {
+    return true;
+  }
+
+  return selectedPlatforms.some(sp => {
+    if (sp === 'blogs') return false;
+
+    const normalized = sp
+      .replace('x/twitter', 'twitter')
+      .replace('x/', '')
+      .trim();
+
+    return (
+      ch === normalized ||
+      ch.includes(normalized) ||
+      normalized.includes(ch)
+    );
+  });
+});
+
+  const filterChannels = [
+  ...channels,
+  ...(blogsSelected && !channels.some(ch =>
+    ch.toLowerCase().includes('blog')
+  )
+    ? ['Blogs']
+    : []),
+];
   const q = search.toLowerCase();
   const shown = filtered.filter(x => (filter === 'all' || x.channel === filter) && (!q || (x.title + ' ' + x.bodyText).toLowerCase().includes(q)));
-  const waiting = SEC_META.filter(x => !s.sections[x.key]).length;
+  const activeSections = SEC_META.filter(sec => {
+  if (sec.key === 'social') {
+    return studioPlatforms.some(p =>
+      ['Instagram', 'Facebook', 'LinkedIn', 'X/Twitter', 'YouTube'].includes(p)
+    );
+  }
 
+  if (sec.key === 'blogs') {
+    return studioPlatforms.includes('Blogs');
+  }
+
+  return false;
+});
+
+const waiting = activeSections.filter(
+  sec => !s.sections[sec.key]?.length
+).length;
   // Group by channel
   const byChannel: Record<string, Piece[]> = {};
   shown.forEach(p => { (byChannel[p.channel] = byChannel[p.channel] || []).push(p); });
@@ -473,12 +514,14 @@ export default function StudioPage() {
     {!pollError&&s.generationStatus==='cancelled'&&<div className="banner warn"><span>Generation cancelled.</span></div>}
     {showUpgrade&&<div className="banner"><span>Regeneration is a Pro feature. Your existing content is safe; upgrade to create an improved version.</span><a className="btn btn-primary btn-sm" href="/pricing">View plans</a><button className="btn btn-ghost btn-sm" onClick={()=>setShowUpgrade(false)}>Close</button></div>}
     {s.jobId && waiting>0 && !pollError && s.generationStatus!=='cancelled' && (() => {
-      const received = SEC_META.length - waiting;
-      const progress = Math.round((received / SEC_META.length) * 100);
+      const received = activeSections.length - waiting;
+      const progress = activeSections.length
+  ? Math.round((received / activeSections.length) * 100)
+  : 0;
       return <div className="studio-generation-strip">
         <div className="studio-generation-main">
           <div className="studio-generation-row"><span>Generating content</span><small>{received} of {SEC_META.length} sections received</small></div>
-          <div className="studio-generation-progress" role="progressbar" aria-valuemin={0} aria-valuemax={SEC_META.length} aria-valuenow={received}>
+          <div className="studio-generation-progress" role="progressbar" aria-valuemin={0} aria-valuemax={activeSections.length} aria-valuenow={received}>
             <span style={{width:`${Math.max(8,progress)}%`}} />
           </div>
         </div>
@@ -488,7 +531,7 @@ export default function StudioPage() {
 
     {/* Platform filter tabs */}
     <div className="platform-tabs">
-      {['all', ...channels].map(rawF => { const f=String(rawF); return (
+      {['all', ...filterChannels].map(rawF => { const f=String(rawF); return (
         <button key={f} className="platform-tab" aria-pressed={filter===f} onClick={()=>setFilter(f)}>
           {f !== 'all' && <PlatformIcon channel={f} />}
           {f === 'all' ? 'All' : f}

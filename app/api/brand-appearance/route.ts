@@ -22,6 +22,10 @@ const DEFAULTS = {
   font_family: '',
 };
 
+/* ============================================================
+   COLOR HELPERS
+   ============================================================ */
+
 function rgbToHex(r: number, g: number, b: number): string {
   return (
     '#' +
@@ -127,6 +131,263 @@ function normaliseColor(value: string): string {
   return '';
 }
 
+/* ============================================================
+   LOGO HELPERS
+   ============================================================ */
+
+function isSocialImage(value: string): boolean {
+  const hay = String(value || '').toLowerCase();
+
+  const patterns = [
+    /facebook/,
+    /instagram/,
+    /linkedin/,
+    /twitter/,
+    /(^|[^a-z])x\.com/,
+    /youtube/,
+    /whatsapp/,
+    /telegram/,
+    /tiktok/,
+    /pinterest/,
+    /snapchat/,
+    /reddit/,
+    /discord/,
+    /threads/,
+    /social[-_ ]?icon/,
+    /social[-_ ]?media/,
+    /share[-_ ]?icon/,
+    /share[-_ ]?button/,
+  ];
+
+  return patterns.some((pattern) => pattern.test(hay));
+}
+
+function isClearlyBadLogoCandidate(value: string): boolean {
+  const hay = String(value || '').toLowerCase();
+
+  if (!hay) {
+    return true;
+  }
+
+  const patterns = [
+    /sprite/,
+    /banner/,
+    /hero/,
+    /slider/,
+    /carousel/,
+    /payment/,
+    /tracking/,
+    /pixel/,
+    /avatar/,
+    /profile/,
+    /placeholder/,
+    /captcha/,
+    /favicon/,
+    /apple-touch-icon/,
+    /loader/,
+    /spinner/,
+    /close/,
+    /menu-icon/,
+    /hamburger/,
+    /search-icon/,
+    /arrow/,
+    /chevron/,
+    /badge/,
+    /rating/,
+    /star/,
+    /qr[-_ ]?code/,
+  ];
+
+  return patterns.some((pattern) => pattern.test(hay));
+}
+
+function isNonCompanyBrandImage(value: string): boolean {
+  const hay = String(value || '').toLowerCase();
+
+  /*
+   * These are common places where websites display:
+   * - customer logos
+   * - partner logos
+   * - client logos
+   * - portfolio logos
+   * - case-study logos
+   *
+   * These must never become the company's own logo.
+   */
+  const patterns = [
+    /client[-_ ]?logo/,
+    /customer[-_ ]?logo/,
+    /partner[-_ ]?logo/,
+    /trusted[-_ ]?brand/,
+    /our[-_ ]?clients/,
+    /our[-_ ]?partners/,
+    /client[-_ ]?section/,
+    /customer[-_ ]?section/,
+    /partner[-_ ]?section/,
+    /portfolio/,
+    /case[-_ ]?study/,
+    /case[-_ ]?studies/,
+    /testimonial/,
+    /featured[-_ ]?clients/,
+    /featured[-_ ]?partners/,
+    /logo[-_ ]?slider/,
+    /logo[-_ ]?carousel/,
+    /clients[-_ ]?slider/,
+    /partners[-_ ]?slider/,
+    /clients[-_ ]?carousel/,
+    /partners[-_ ]?carousel/,
+  ];
+
+  return patterns.some((pattern) => pattern.test(hay));
+}
+
+function isKnownThirdPartyBrand(value: string): boolean {
+  const hay = String(value || '').toLowerCase();
+
+  /*
+   * These are deliberately only used as a safety net.
+   *
+   * A third-party logo such as Flipkart should never become the
+   * company's logo just because the image filename contains
+   * "logo".
+   */
+  const patterns = [
+    /flipkart/,
+    /amazon/,
+    /myntra/,
+    /meesho/,
+    /google/,
+    /microsoft/,
+    /apple/,
+    /meta/,
+    /facebook/,
+    /instagram/,
+    /linkedin/,
+    /youtube/,
+    /twitter/,
+    /tata/,
+    /jindal/,
+    /adani/,
+    /reliance/,
+    /infosys/,
+    /tcs/,
+    /wipro/,
+    /zoho/,
+    /redington/,
+    /ingram/,
+    /crayon/,
+  ];
+
+  return patterns.some((pattern) => pattern.test(hay));
+}
+
+function isUsableLogoUrl(value: unknown): value is string {
+  if (typeof value !== 'string') {
+    return false;
+  }
+
+  const logoUrl = value.trim();
+
+  if (!logoUrl) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(logoUrl);
+
+    if (!/^https?:$/i.test(parsed.protocol)) {
+      return false;
+    }
+
+    const haystack =
+      `${parsed.hostname} ${parsed.pathname} ${parsed.search}`.toLowerCase();
+
+    if (isSocialImage(haystack)) {
+      return false;
+    }
+
+    if (isClearlyBadLogoCandidate(haystack)) {
+      return false;
+    }
+
+    if (isNonCompanyBrandImage(haystack)) {
+      return false;
+    }
+
+    if (isKnownThirdPartyBrand(haystack)) {
+      return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/* ============================================================
+   ATTRIBUTE PARSER
+   ============================================================ */
+
+function parseAttributes(tag: string): Record<string, string> {
+  const out: Record<string, string> = {};
+
+  for (const match of tag.matchAll(
+    /([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g,
+  )) {
+    out[match[1].toLowerCase()] = (
+      match[2] ??
+      match[3] ??
+      match[4] ??
+      ''
+    ).trim();
+  }
+
+  return out;
+}
+
+/* ============================================================
+   URL HELPER
+   ============================================================ */
+
+function makeAbsoluteUrl(
+  raw: string,
+  baseUrl: string,
+): string {
+  let src = String(raw || '').trim();
+
+  if (!src) {
+    return '';
+  }
+
+  if (src.startsWith('data:')) {
+    return '';
+  }
+
+  if (src.startsWith('//')) {
+    src = 'https:' + src;
+  }
+
+  try {
+    return new URL(src, baseUrl).href;
+  } catch {
+    return '';
+  }
+}
+
+/* ============================================================
+   LOGO CANDIDATE
+   ============================================================ */
+
+type LogoCandidate = {
+  src: string;
+  score: number;
+  reason: string;
+};
+
+/* ============================================================
+   GET
+   ============================================================ */
+
 export async function GET(req: NextRequest) {
   const limited = await apiGuard(req, {
     rateLimit: 120,
@@ -138,8 +399,11 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Brand extraction is independent of n8n/generation configuration.
-    // Do not block an existing company workspace just because generation env is unavailable.
+    /*
+     * Brand extraction is independent of n8n/generation configuration.
+     * Do not block an existing company workspace just because
+     * generation environment variables are unavailable.
+     */
     const rawUrl = req.nextUrl.searchParams.get('url');
 
     if (!rawUrl) {
@@ -158,17 +422,35 @@ export async function GET(req: NextRequest) {
     const forceRefresh =
       req.nextUrl.searchParams.get('refresh') === '1';
 
+    /* ============================================================
+       CACHE
+       ============================================================ */
+
     const cached = forceRefresh
       ? null
       : appearanceCacheGet(url);
 
-    if (cached) {
+    /*
+     * Never return a cached social/partner/client/third-party logo.
+     * If the cached logo is invalid, continue with a fresh scrape.
+     */
+    if (
+      cached &&
+      typeof cached === 'object' &&
+      isUsableLogoUrl(
+        (cached as Record<string, unknown>).logo_url,
+      )
+    ) {
       return NextResponse.json(cached, {
         headers: {
           'X-Cache': 'HIT',
         },
       });
     }
+
+    /* ============================================================
+       FETCH WEBSITE
+       ============================================================ */
 
     const res = await fetchPublicResource(url, {
       headers: {
@@ -213,6 +495,10 @@ export async function GET(req: NextRequest) {
       ),
     );
 
+    /* ============================================================
+       STYLESHEETS
+       ============================================================ */
+
     const stylesheetHrefs = [
       ...html.matchAll(
         /<link[^>]+rel=["']stylesheet["'][^>]*href=["']([^"']+)["'][^>]*>/gi,
@@ -224,233 +510,556 @@ export async function GET(req: NextRequest) {
     const cssParts = await Promise.all(
       stylesheetHrefs.map(async (href) => {
         try {
-          const cssUrl = new URL(href, url).toString();
+          const cssUrl = new URL(
+            href,
+            url,
+          ).toString();
 
           if (await isPrivateHost(cssUrl)) {
             return '';
           }
 
-          const cssRes = await fetchPublicResource(
-            cssUrl,
-            {
-              headers: {
-                'User-Agent':
-                  'Mozilla/5.0 (compatible; SparrowBrandTheme/1.0)',
-                Accept: 'text/css,*/*;q=0.1',
+          const cssRes =
+            await fetchPublicResource(
+              cssUrl,
+              {
+                headers: {
+                  'User-Agent':
+                    'Mozilla/5.0 (compatible; SparrowBrandTheme/1.0)',
+                  Accept:
+                    'text/css,*/*;q=0.1',
+                },
+                signal:
+                  AbortSignal.timeout(5000),
               },
-              signal: AbortSignal.timeout(5000),
-            },
-          );
+            );
 
-          return cssRes.ok
-            ? '\n' +
-                new TextDecoder().decode(
-                  await readResponseLimited(
-                    cssRes,
-                    1024 * 1024,
-                  ),
-                ).slice(0, 250000)
-            : '';
+          if (!cssRes.ok) {
+            return '';
+          }
+
+          return (
+            '\n' +
+            new TextDecoder().decode(
+              await readResponseLimited(
+                cssRes,
+                1024 * 1024,
+              ),
+            ).slice(
+              0,
+              250000,
+            )
+          );
         } catch {
           return '';
         }
       }),
     );
 
-    const stylesheetText = cssParts.join('');
+    const stylesheetText =
+      cssParts.join('');
 
-    // ============================================================
-    // LOGO
-    // ============================================================
+    /* ============================================================
+       LOGO EXTRACTION
+       ============================================================ */
 
-    const attrsOf = (
-      tag: string,
-    ): Record<string, string> => {
-      const out: Record<string, string> = {};
+    const candidates: LogoCandidate[] = [];
 
-      for (const m of tag.matchAll(
-        /([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g,
-      )) {
-        out[m[1].toLowerCase()] =
-          (
-            m[2] ??
-            m[3] ??
-            m[4] ??
-            ''
-          ).trim();
-      }
+    const headerMatches = [
+      ...html.matchAll(
+        /<(header|nav)\b[\s\S]*?<\/\1>/gi,
+      ),
+    ];
 
-      return out;
-    };
+    const headerHtml = headerMatches
+      .map((match) => match[0])
+      .join('\n');
 
-    const toAbs = (raw: string) => {
-      let src = String(raw || '').trim();
+    let hostname = '';
 
-      if (!src || src.startsWith('data:')) {
-        return '';
-      }
+    try {
+      hostname = new URL(url)
+        .hostname
+        .replace(/^www\./i, '')
+        .split('.')[0]
+        .toLowerCase();
+    } catch {
+      hostname = '';
+    }
 
-      if (src.startsWith('//')) {
-        src = 'https:' + src;
-      }
+    const hostnameWords = hostname
+      .split(/[-_]/)
+      .filter(Boolean);
 
-      try {
-        return new URL(src, url).href;
-      } catch {
-        return '';
-      }
-    };
+    /*
+     * Extract page title as an additional company-identity signal.
+     */
+    const titleMatch = html.match(
+      /<title[^>]*>([\s\S]*?)<\/title>/i,
+    );
 
-    const candidates: {
-      src: string;
-      score: number;
-    }[] = [];
+    const pageTitle = titleMatch
+      ? titleMatch[1]
+          .replace(/\s+/g, ' ')
+          .trim()
+          .toLowerCase()
+      : '';
 
-    const headerHtml =
-      (
-        html.match(
-          /<(?:header|nav)\b[\s\S]*?<\/(?:header|nav)>/i,
-        ) || ['']
-      )[0];
+    /*
+     * ------------------------------------------------------------
+     * IMG TAGS
+     * ------------------------------------------------------------
+     */
 
-    for (const m of html.matchAll(
+    for (const match of html.matchAll(
       /<img\b[^>]*>/gi,
     )) {
-      const at = attrsOf(m[0]);
+      const tag = match[0];
+
+      const attrs =
+        parseAttributes(tag);
 
       const raw =
-        at['src'] ||
-        at['data-src'] ||
-        at['data-lazy-src'] ||
-        at['data-original'] ||
+        attrs['src'] ||
+        attrs['data-src'] ||
+        attrs['data-lazy-src'] ||
+        attrs['data-original'] ||
         (
-          at['srcset'] ||
-          at['data-srcset'] ||
-          at['data-lazy-srcset'] ||
+          attrs['srcset'] ||
+          attrs['data-srcset'] ||
+          attrs['data-lazy-srcset'] ||
           ''
         )
-          .split(',')[0]
-          ?.trim()
-          .split(/\s+/)[0] ||
+          .split(',')
+          .map((part) =>
+            part
+              .trim()
+              .split(/\s+/)[0],
+          )
+          .find(Boolean) ||
         '';
 
-      const src = toAbs(raw);
+      const src =
+        makeAbsoluteUrl(
+          raw,
+          url,
+        );
 
       if (!src) {
         continue;
       }
 
+      const tagIndex =
+        match.index ?? -1;
+
+      /*
+       * Look around the image so we can determine whether it is
+       * inside a partner/client/customer section.
+       */
+      const contextStart =
+        Math.max(
+          0,
+          tagIndex - 1800,
+        );
+
+      const contextEnd =
+        Math.min(
+          html.length,
+          tagIndex + 1800,
+        );
+
+      const context =
+        html
+          .slice(
+            contextStart,
+            contextEnd,
+          )
+          .toLowerCase();
+
       const hay =
-        (at['class'] || '') +
-        ' ' +
-        (at['id'] || '') +
-        ' ' +
-        (at['alt'] || '') +
-        ' ' +
-        src;
+        [
+          attrs['class'] || '',
+          attrs['id'] || '',
+          attrs['alt'] || '',
+          attrs['title'] || '',
+          attrs['name'] || '',
+          src,
+        ].join(' ');
+
+      const hayLower =
+        hay.toLowerCase();
+
+      /* ----------------------------------------------------------
+         HARD REJECTIONS
+         ---------------------------------------------------------- */
+
+      if (
+        isSocialImage(
+          hayLower,
+        )
+      ) {
+        continue;
+      }
+
+      if (
+        isClearlyBadLogoCandidate(
+          hayLower,
+        )
+      ) {
+        continue;
+      }
+
+      if (
+        isKnownThirdPartyBrand(
+          hayLower,
+        )
+      ) {
+        continue;
+      }
+
+      /*
+       * IMPORTANT:
+       *
+       * A partner/client logo is NOT allowed merely because
+       * its alt text contains the word "logo".
+       *
+       * This is what prevents Flipkart from becoming TechBliss'
+       * logo.
+       */
+      const partnerContext =
+        /client|customer|partner|portfolio|case[-_ ]?stud|testimonial|trusted|featured[-_ ]?(client|partner|brand)|our[-_ ]?(clients|customers|partners)/i.test(
+          context,
+        );
+
+      const isInsideHeader =
+        Boolean(
+          headerHtml &&
+          headerHtml.includes(tag),
+        );
+
+      const isExplicitSiteLogo =
+        /(?:site|company|website|main|header)[-_ ]?logo/i.test(
+          hayLower,
+        ) ||
+        /wordmark|masthead|site[-_ ]?title|navbar[-_ ]?brand/i.test(
+          hayLower,
+        );
+
+      /*
+       * If the image is in a partner/client area and it is not
+       * clearly the site's own header/brand logo, reject it.
+       */
+      if (
+        partnerContext &&
+        !isInsideHeader &&
+        !isExplicitSiteLogo
+      ) {
+        continue;
+      }
+
+      /*
+       * Reject known third-party brand names appearing in the
+       * surrounding context unless the image is clearly the
+       * site's own header logo.
+       */
+      if (
+        !isInsideHeader &&
+        !isExplicitSiteLogo &&
+        isKnownThirdPartyBrand(
+          context,
+        )
+      ) {
+        continue;
+      }
+
+      /* ----------------------------------------------------------
+         SCORING
+         ---------------------------------------------------------- */
 
       let score = 0;
 
-      if (/logo/i.test(hay)) {
+      let reason =
+        'generic image';
+
+      if (
+        /\blogo\b/i.test(
+          hayLower,
+        )
+      ) {
+        score += 25;
+        reason =
+          'explicit logo name';
+      }
+
+      if (
+        /(?:site|company|website|main|header)[-_ ]?logo/i.test(
+          hayLower,
+        )
+      ) {
+        score += 15;
+        reason =
+          'site/company logo';
+      }
+
+      if (
+        /wordmark|masthead|site[-_ ]?title|navbar[-_ ]?brand/i.test(
+          hayLower,
+        )
+      ) {
         score += 10;
       }
 
-      if (/brand|site-?title|navbar/i.test(hay)) {
+      if (
+        isInsideHeader
+      ) {
+        score += 12;
+      }
+
+      if (
+        /\blogo\b/i.test(
+          [
+            attrs['alt'] || '',
+            attrs['title'] || '',
+          ].join(' '),
+        )
+      ) {
+        score += 15;
+      }
+
+      if (
+        hostname &&
+        hayLower.includes(
+          hostname,
+        )
+      ) {
+        score += 8;
+      }
+
+      if (
+        hostnameWords.some(
+          (word) =>
+            word.length >= 4 &&
+            hayLower.includes(word),
+        )
+      ) {
+        score += 5;
+      }
+
+      if (
+        /(?:^|[/_-])logo(?:[/_.?-]|$)/i.test(
+          src,
+        )
+      ) {
+        score += 12;
+      }
+
+      if (
+        /\.svg(?:[?#]|$)/i.test(
+          src,
+        )
+      ) {
         score += 3;
       }
 
       if (
-        headerHtml &&
-        headerHtml.includes(m[0])
-      ) {
-        score += 6;
-      }
-
-      if (
-        /sprite|banner|hero|slider|payment|icon-(?:facebook|twitter|instagram)|avatar|tracking|pixel/i.test(
-          hay,
+        /\/(?:logo|logos|branding)\//i.test(
+          src,
         )
       ) {
-        score -= 8;
+        score += 5;
       }
 
+      /*
+       * If the image is near the site's own hostname/company
+       * wording, give it a small bonus.
+       */
+      const nearbyText =
+        context
+          .replace(
+            /<[^>]+>/g,
+            ' ',
+          )
+          .replace(
+            /\s+/g,
+            ' ',
+          )
+          .trim();
+
+      if (
+        hostnameWords.some(
+          (word) =>
+            word.length >= 4 &&
+            nearbyText.includes(
+              word,
+            ),
+        )
+      ) {
+        score += 4;
+      }
+
+      /*
+       * A filename such as flipkart-logo.png is a strong
+       * third-party signal.
+       */
+      if (
+        isKnownThirdPartyBrand(
+          src,
+        )
+      ) {
+        score -= 100;
+      }
+
+      /*
+       * Do not allow weak candidates.
+       */
       if (score > 0) {
         candidates.push({
           src,
           score,
+          reason,
         });
       }
     }
 
-    // JSON-LD logo
-    for (const m of html.matchAll(
-      /<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi,
+    /*
+     * ------------------------------------------------------------
+     * JSON-LD LOGO
+     * ------------------------------------------------------------
+     */
+
+    for (const match of html.matchAll(
+      /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
     )) {
       try {
-        const walk = (
-          node: any,
-        ): string => {
-          if (
-            !node ||
-            typeof node !== 'object'
-          ) {
-            return '';
-          }
+        const json =
+          JSON.parse(
+            match[1],
+          );
 
-          const l = node.logo;
-
-          if (typeof l === 'string') {
-            return l;
-          }
-
-          if (
-            l &&
-            typeof l === 'object' &&
-            typeof l.url === 'string'
-          ) {
-            return l.url;
-          }
-
-          for (const v of Object.values(node)) {
-            const found = walk(v);
-
-            if (found) {
-              return found;
+        const walk =
+          (
+            node: unknown,
+          ): string => {
+            if (
+              !node ||
+              typeof node !==
+                'object'
+            ) {
+              return '';
             }
-          }
 
-          return '';
-        };
+            const obj =
+              node as Record<
+                string,
+                unknown
+              >;
 
-        const src = toAbs(
-          walk(JSON.parse(m[1])),
-        );
+            const logo =
+              obj.logo;
 
-        if (src) {
+            if (
+              typeof logo ===
+              'string'
+            ) {
+              return logo;
+            }
+
+            if (
+              logo &&
+              typeof logo ===
+                'object' &&
+              typeof (
+                logo as Record<
+                  string,
+                  unknown
+                >
+              ).url ===
+                'string'
+            ) {
+              return (
+                logo as Record<
+                  string,
+                  string
+                >
+              ).url;
+            }
+
+            for (
+              const value of
+                Object.values(
+                  obj,
+                )
+            ) {
+              const found =
+                walk(value);
+
+              if (found) {
+                return found;
+              }
+            }
+
+            return '';
+          };
+
+        const src =
+          makeAbsoluteUrl(
+            walk(json),
+            url,
+          );
+
+        if (
+          src &&
+          isUsableLogoUrl(
+            src,
+          )
+        ) {
           candidates.push({
             src,
-            score: 9,
+            score: 60,
+            reason:
+              'JSON-LD organization logo',
           });
         }
       } catch {
-        // Ignore invalid JSON-LD.
+        /*
+         * Ignore malformed JSON-LD.
+         */
       }
     }
 
-    // Link icons
-    for (const m of html.matchAll(
+    /*
+     * ------------------------------------------------------------
+     * LINK ICONS
+     * ------------------------------------------------------------
+     */
+
+    for (const match of html.matchAll(
       /<link\b[^>]*>/gi,
     )) {
-      const at = attrsOf(m[0]);
+      const attrs =
+        parseAttributes(
+          match[0],
+        );
+
       const rel = (
-        at['rel'] || ''
+        attrs['rel'] || ''
       ).toLowerCase();
 
-      const src = toAbs(
-        at['href'] || '',
-      );
+      const src =
+        makeAbsoluteUrl(
+          attrs['href'] || '',
+          url,
+        );
 
       if (!src) {
+        continue;
+      }
+
+      if (
+        !isUsableLogoUrl(
+          src,
+        )
+      ) {
         continue;
       }
 
@@ -462,6 +1071,8 @@ export async function GET(req: NextRequest) {
         candidates.push({
           src,
           score: 4,
+          reason:
+            'apple touch icon',
         });
       } else if (
         rel.includes('icon')
@@ -469,42 +1080,101 @@ export async function GET(req: NextRequest) {
         candidates.push({
           src,
           score: 2,
+          reason:
+            'site icon',
         });
       }
     }
 
-    // OpenGraph image — lowest priority because it is
-    // normally a hero/share image rather than the logo.
-    for (const m of html.matchAll(
+    /*
+     * ------------------------------------------------------------
+     * OPEN GRAPH IMAGE
+     * ------------------------------------------------------------
+     *
+     * OG image is intentionally very low priority.
+     */
+
+    for (const match of html.matchAll(
       /<meta\b[^>]*>/gi,
     )) {
-      const at = attrsOf(m[0]);
+      const attrs =
+        parseAttributes(
+          match[0],
+        );
 
       if (
         (
-          at['property'] || ''
-        ).toLowerCase() ===
+          attrs['property'] ||
+          ''
+        ).toLowerCase() !==
         'og:image'
       ) {
-        const src = toAbs(
-          at['content'] || '',
+        continue;
+      }
+
+      const src =
+        makeAbsoluteUrl(
+          attrs['content'] || '',
+          url,
         );
 
-        if (src) {
-          candidates.push({
-            src,
-            score: 1,
-          });
-        }
+      if (
+        src &&
+        isUsableLogoUrl(
+          src,
+        )
+      ) {
+        candidates.push({
+          src,
+          score: 1,
+          reason:
+            'Open Graph image',
+        });
       }
     }
 
-    candidates.sort(
-      (x, y) => y.score - x.score,
+    /*
+     * ------------------------------------------------------------
+     * FINAL LOGO FILTER
+     * ------------------------------------------------------------
+     */
+
+    const validCandidates =
+      candidates.filter(
+        (candidate) =>
+          isUsableLogoUrl(
+            candidate.src,
+          ),
+      );
+
+    validCandidates.sort(
+      (a, b) =>
+        b.score - a.score,
     );
 
-    let logo =
-      candidates[0]?.src || '';
+    let logo = '';
+
+    for (
+      const candidate of
+        validCandidates
+    ) {
+      if (
+        isUsableLogoUrl(
+          candidate.src,
+        )
+      ) {
+        logo =
+          candidate.src;
+
+        break;
+      }
+    }
+
+    /*
+     * ------------------------------------------------------------
+     * FINAL FAVICON FALLBACK
+     * ------------------------------------------------------------
+     */
 
     if (!logo) {
       try {
@@ -513,22 +1183,23 @@ export async function GET(req: NextRequest) {
           new URL(url).hostname +
           '&sz=128';
       } catch {
-        // Ignore.
+        logo = '';
       }
     }
 
-    // ============================================================
-    // COLORS
-    // ============================================================
+    /* ============================================================
+       COLORS
+       ============================================================ */
 
-    const allColors: Record<
-      string,
-      number
-    > = {};
+    const allColors:
+      Record<string, number> =
+      {};
 
-    // ------------------------------------------------------------
-    // Theme color
-    // ------------------------------------------------------------
+    /*
+     * ------------------------------------------------------------
+     * THEME COLOR
+     * ------------------------------------------------------------
+     */
 
     let themeColor = '';
 
@@ -542,146 +1213,208 @@ export async function GET(req: NextRequest) {
         themeMeta[1].trim();
     }
 
-    // ------------------------------------------------------------
-    // HEX colors
-    // ------------------------------------------------------------
+    /*
+     * ------------------------------------------------------------
+     * HEX COLORS
+     * ------------------------------------------------------------
+     */
+
+    const combinedSource =
+      html +
+      '\n' +
+      stylesheetText;
 
     const hexRe =
       /#([0-9a-fA-F]{6})\b/g;
 
-    let m;
+    let colorMatch:
+      RegExpExecArray | null;
 
     while (
-      (m = hexRe.exec(
-        html +
-          '\n' +
-          stylesheetText,
-      )) !== null
+      (
+        colorMatch =
+          hexRe.exec(
+            combinedSource,
+          )
+      ) !== null
     ) {
       const hex =
         '#' +
-        m[1].toLowerCase();
+        colorMatch[1]
+          .toLowerCase();
 
       allColors[hex] =
         (allColors[hex] || 0) +
         1;
     }
 
-    // ------------------------------------------------------------
-    // RGB colors
-    // ------------------------------------------------------------
+    /*
+     * ------------------------------------------------------------
+     * RGB COLORS
+     * ------------------------------------------------------------
+     */
 
     const rgbRe =
       /rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/g;
 
     while (
-      (m = rgbRe.exec(
-        html +
-          '\n' +
-          stylesheetText,
-      )) !== null
+      (
+        colorMatch =
+          rgbRe.exec(
+            combinedSource,
+          )
+      ) !== null
     ) {
-      const hex = rgbToHex(
-        parseInt(m[1]),
-        parseInt(m[2]),
-        parseInt(m[3]),
-      );
+      const hex =
+        rgbToHex(
+          parseInt(
+            colorMatch[1],
+            10,
+          ),
+          parseInt(
+            colorMatch[2],
+            10,
+          ),
+          parseInt(
+            colorMatch[3],
+            10,
+          ),
+        );
 
       allColors[hex] =
         (allColors[hex] || 0) +
         1;
     }
 
-    // ------------------------------------------------------------
-    // HSL colors
-    // ------------------------------------------------------------
+    /*
+     * ------------------------------------------------------------
+     * HSL COLORS
+     * ------------------------------------------------------------
+     */
 
     const hslRe =
       /hsla?\(\s*([\d.+-]+)(?:deg)?\s*[, ]\s*([\d.+-]+)%\s*[, ]\s*([\d.+-]+)%/gi;
 
     while (
-      (m = hslRe.exec(
-        html +
-          '\n' +
-          stylesheetText,
-      )) !== null
+      (
+        colorMatch =
+          hslRe.exec(
+            combinedSource,
+          )
+      ) !== null
     ) {
-      const hex = hslToHex(
-        Number(m[1]),
-        Number(m[2]),
-        Number(m[3]),
-      );
+      const hex =
+        hslToHex(
+          Number(
+            colorMatch[1],
+          ),
+          Number(
+            colorMatch[2],
+          ),
+          Number(
+            colorMatch[3],
+          ),
+        );
 
       allColors[hex] =
         (allColors[hex] || 0) +
         1;
     }
 
-    // ------------------------------------------------------------
-    // Inline styles
-    // ------------------------------------------------------------
+    /*
+     * ------------------------------------------------------------
+     * INLINE STYLES
+     * ------------------------------------------------------------
+     */
 
     const styleRe =
       /style="[^"]*(?:background(?:-color)?|color|border-color)\s*:\s*([^;"]+)/gi;
 
     while (
-      (m = styleRe.exec(html)) !== null
+      (
+        colorMatch =
+          styleRe.exec(
+            html,
+          )
+      ) !== null
     ) {
-      const val =
-        m[1].trim();
+      const value =
+        colorMatch[1].trim();
 
       const hexMatch =
-        val.match(
+        value.match(
           /#([0-9a-fA-F]{6})\b/,
         );
 
       if (hexMatch) {
-        const h =
+        const hex =
           '#' +
-          hexMatch[1].toLowerCase();
+          hexMatch[1]
+            .toLowerCase();
 
-        allColors[h] =
-          (allColors[h] || 0) +
+        allColors[hex] =
+          (allColors[hex] || 0) +
           3;
       }
 
       const rgbMatch =
-        val.match(
+        value.match(
           /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/,
         );
 
       if (rgbMatch) {
-        const h = rgbToHex(
-          parseInt(rgbMatch[1]),
-          parseInt(rgbMatch[2]),
-          parseInt(rgbMatch[3]),
-        );
+        const hex =
+          rgbToHex(
+            parseInt(
+              rgbMatch[1],
+              10,
+            ),
+            parseInt(
+              rgbMatch[2],
+              10,
+            ),
+            parseInt(
+              rgbMatch[3],
+              10,
+            ),
+          );
 
-        allColors[h] =
-          (allColors[h] || 0) +
+        allColors[hex] =
+          (allColors[hex] || 0) +
           3;
       }
     }
 
-    // ------------------------------------------------------------
-    // <style> blocks
-    // ------------------------------------------------------------
+    /*
+     * ------------------------------------------------------------
+     * STYLE BLOCKS
+     * ------------------------------------------------------------
+     */
 
     const styleBlocks =
       html.match(
         /<style[^>]*>([\s\S]*?)<\/style>/gi,
       ) || [];
 
-    for (const block of styleBlocks) {
+    for (
+      const block of
+        styleBlocks
+    ) {
       const innerHex =
         /#([0-9a-fA-F]{6})\b/g;
 
       while (
-        (m = innerHex.exec(block)) !== null
+        (
+          colorMatch =
+            innerHex.exec(
+              block,
+            )
+        ) !== null
       ) {
         const hex =
           '#' +
-          m[1].toLowerCase();
+          colorMatch[1]
+            .toLowerCase();
 
         allColors[hex] =
           (allColors[hex] || 0) +
@@ -692,13 +1425,28 @@ export async function GET(req: NextRequest) {
         /rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/g;
 
       while (
-        (m = innerRgb.exec(block)) !== null
+        (
+          colorMatch =
+            innerRgb.exec(
+              block,
+            )
+        ) !== null
       ) {
-        const hex = rgbToHex(
-          parseInt(m[1]),
-          parseInt(m[2]),
-          parseInt(m[3]),
-        );
+        const hex =
+          rgbToHex(
+            parseInt(
+              colorMatch[1],
+              10,
+            ),
+            parseInt(
+              colorMatch[2],
+              10,
+            ),
+            parseInt(
+              colorMatch[3],
+              10,
+            ),
+          );
 
         allColors[hex] =
           (allColors[hex] || 0) +
@@ -706,35 +1454,47 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // ------------------------------------------------------------
-    // Remove grayscale / near-white / near-black colors
-    // ------------------------------------------------------------
+    /*
+     * ------------------------------------------------------------
+     * MEANINGFUL COLORS
+     * ------------------------------------------------------------
+     *
+     * Remove:
+     * - grayscale colours
+     * - near-white colours
+     * - near-black colours
+     */
 
     const meaningful: [
       string,
       number,
     ][] = [];
 
-    for (const [
-      hex,
-      count,
-    ] of Object.entries(
-      allColors,
-    )) {
-      const r = parseInt(
-        hex.slice(1, 3),
-        16,
-      );
+    for (
+      const [
+        hex,
+        count,
+      ] of Object.entries(
+        allColors,
+      )
+    ) {
+      const r =
+        parseInt(
+          hex.slice(1, 3),
+          16,
+        );
 
-      const g = parseInt(
-        hex.slice(3, 5),
-        16,
-      );
+      const g =
+        parseInt(
+          hex.slice(3, 5),
+          16,
+        );
 
-      const b = parseInt(
-        hex.slice(5, 7),
-        16,
-      );
+      const b =
+        parseInt(
+          hex.slice(5, 7),
+          16,
+        );
 
       const isGray =
         Math.abs(r - g) < 25 &&
@@ -763,12 +1523,13 @@ export async function GET(req: NextRequest) {
     }
 
     meaningful.sort(
-      (a, b) => b[1] - a[1],
+      (a, b) =>
+        b[1] - a[1],
     );
 
-    // ============================================================
-    // CSS VARIABLES
-    // ============================================================
+    /* ============================================================
+       CSS VARIABLES
+       ============================================================ */
 
     let backgroundColor = '';
     let textColor = '';
@@ -782,16 +1543,20 @@ export async function GET(req: NextRequest) {
 
     const readCssVarColor = (
       names: string[],
-    ) => {
-      for (const name of names) {
+    ): string => {
+      for (
+        const name of names
+      ) {
         const re =
           new RegExp(
-            `--${name}\\s*:\\s*([^;}]*)`,
+            `--${name}\\s*:\\s*([^;}]+)`,
             'i',
           );
 
         const match =
-          styleSource.match(re);
+          styleSource.match(
+            re,
+          );
 
         if (match) {
           const color =
@@ -842,9 +1607,9 @@ export async function GET(req: NextRequest) {
         'foreground',
       ]);
 
-    // ============================================================
-    // BODY / ROOT COLORS
-    // ============================================================
+    /* ============================================================
+       BODY / ROOT COLORS
+       ============================================================ */
 
     const bodyMatch =
       styleSource.match(
@@ -920,9 +1685,9 @@ export async function GET(req: NextRequest) {
       variableText ||
       textColor;
 
-    // ============================================================
-    // BACKGROUND FALLBACK
-    // ============================================================
+    /* ============================================================
+       BACKGROUND FALLBACK
+       ============================================================ */
 
     if (!backgroundColor) {
       const bgCandidates =
@@ -985,9 +1750,9 @@ export async function GET(req: NextRequest) {
         '';
     }
 
-    // ============================================================
-    // TEXT FALLBACK
-    // ============================================================
+    /* ============================================================
+       TEXT FALLBACK
+       ============================================================ */
 
     if (!textColor) {
       const textCandidates =
@@ -1060,24 +1825,25 @@ export async function GET(req: NextRequest) {
         '#111827';
     }
 
-    // ============================================================
-    // PRIMARY COLOR
-    // ============================================================
-    //
-    // IMPORTANT:
-    // Do NOT prioritize <meta name="theme-color"> here.
-    //
-    // theme-color is browser/UI metadata and can legitimately be
-    // white even when the company's actual brand color is blue,
-    // red, orange, etc.
-    //
-    // Prefer:
-    //   1. Explicit CSS primary variable
-    //   2. Meaningful website brand color
-    //   3. theme-color only as final fallback
-    //
-    // This fixes TechBliss where theme-color was #ffffff.
-    // ============================================================
+    /* ============================================================
+       PRIMARY COLOR
+       ============================================================ */
+
+    /*
+     * IMPORTANT:
+     *
+     * Do NOT prioritize <meta name="theme-color"> here.
+     *
+     * theme-color is browser/UI metadata and can legitimately
+     * be white even when the company's actual brand colour is
+     * blue, red, orange, etc.
+     *
+     * Priority:
+     *
+     * 1. Explicit CSS primary variable
+     * 2. Meaningful website brand colour
+     * 3. theme-color only as final fallback
+     */
 
     const primary =
       variablePrimary ||
@@ -1090,9 +1856,9 @@ export async function GET(req: NextRequest) {
         themeColor,
       );
 
-    // ============================================================
-    // SECONDARY COLOR
-    // ============================================================
+    /* ============================================================
+       SECONDARY COLOR
+       ============================================================ */
 
     const secondary =
       variableSecondary ||
@@ -1102,9 +1868,9 @@ export async function GET(req: NextRequest) {
           : primary
       );
 
-    // ============================================================
-    // FINAL RESULT
-    // ============================================================
+    /* ============================================================
+       FINAL RESULT
+       ============================================================ */
 
     const result = {
       ...DEFAULTS,
