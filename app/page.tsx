@@ -127,7 +127,26 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="landing-v6-footer"><span><SparrowMark /> Sparrow</span><div><a href="/pricing">Pricing</a><a href="/login">Sign in</a></div></footer>
+            <footer className="landing-v6-footer">
+        <span>
+          <SparrowMark /> Sparrow
+          <span className="footer-powered-by">
+            · Powered by{" "}
+            <a
+              href="https://techbliss.in"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              TechBliss
+            </a>
+          </span>
+        </span>
+
+        <div>
+          <a href="/pricing">Pricing</a>
+          <a href="/login">Sign in</a>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -119,7 +119,23 @@ export default function WorkspaceHome() {
       </section>
 
     </main>
-    <footer className="dashboard-v6-footer"><span>SPARROW · CONTENT OPERATING SYSTEM</span><button onClick={signOut}>Sign out</button></footer>
+    <footer className="dashboard-v6-footer">
+  <span>
+    SPARROW · CONTENT OPERATING SYSTEM
+    <span className="footer-powered-by">
+      · Powered by{" "}
+      <a
+        href="https://techbliss.in"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        TechBliss
+      </a>
+    </span>
+  </span>
+
+  <button onClick={signOut}>Sign out</button>
+</footer>
     <Modal open={limitOpen} onClose={() => setLimitOpen(false)} small><div className="panel-head"><h2>Company limit reached</h2><p>Your current plan allows {limit} saved {limit === 1 ? 'company' : 'companies'}.</p></div><div className="panel-body"><p>Your existing workspace is safe. Choose a plan with more company workspaces when you’re ready.</p><div style={{display:'flex',gap:8,justifyContent:'flex-end'}}><button className="btn btn-ghost" onClick={() => setLimitOpen(false)}>Close</button><a className="btn btn-primary" href="/pricing">View plans</a></div></div></Modal>
   </div>;
 }
