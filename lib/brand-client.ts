@@ -7,15 +7,41 @@ export type BrandAppearance = Record<string, unknown>;
 const inflight = new Map<string, Promise<BrandAppearance | null>>();
 const done = new Map<string, BrandAppearance | null>();
 
+function normaliseHex(value: unknown): string {
+  const raw = String(value || '').trim().toLowerCase();
+  if (/^#[0-9a-f]{6}$/.test(raw)) return raw;
+  const short = raw.match(/^#([0-9a-f]{3})$/);
+  if (short) return '#' + short[1].split('').map((char) => char + char).join('');
+  return '';
+}
+
+function isNearWhite(value: unknown): boolean {
+  const hex = normaliseHex(value);
+  if (!hex) return false;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return r > 220 && g > 220 && b > 220;
+}
+
 export function brandThemeComplete(theme: unknown): boolean {
   const t = (theme || {}) as Record<string, unknown>;
-  return Boolean(
-    String(t.logo_url || '').trim() &&
-    String(t.primary_color || '').trim() &&
-    String(t.secondary_color || '').trim() &&
-    String(t.background_color || '').trim() &&
-    String(t.text_color || '').trim()
-  );
+  const logo = String(t.logo_url || '').trim();
+  const primary = String(t.primary_color || '').trim();
+  const secondary = String(t.secondary_color || '').trim();
+  const background = String(t.background_color || '').trim();
+  const text = String(t.text_color || '').trim();
+
+  if (!logo || !primary || !secondary || !background || !text) return false;
+
+  // A previous scraper version could incorrectly store theme-color (#fff) as
+  // the primary brand colour. If both primary and background are effectively
+  // white, treat the saved theme as incomplete so the dashboard refreshes it.
+  // This still allows legitimate white primary colours when the background is
+  // dark or otherwise different.
+  if (isNearWhite(primary) && isNearWhite(background)) return false;
+
+  return true;
 }
 
 export function mergeTheme(current: unknown, fetched: unknown): BrandAppearance {
