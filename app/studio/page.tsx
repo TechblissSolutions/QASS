@@ -14,7 +14,7 @@ import { useToast } from '@/components/Toast';
 
 import { SEC_META, GIVE_UP_MS, colorFor, PLATFORMS, STYLES } from '@/lib/constants';
 
-import { fmtDate, fmtTime, copyText, sanitizeHtml } from '@/lib/utils';
+import { fmtDate, fmtTime, sanitizeHtml } from '@/lib/utils';
 
 import { parseLiveViewHtml, splitIntoCards } from '@/lib/parser';
 
@@ -66,7 +66,18 @@ function PlatformIcon({ channel }: { channel: string }) {
 
 }
 
-
+function cleanVisibleContent(html: string) {
+  return String(html || '')
+    .replace(
+      /<(p|div)[^>]*>\s*Blog\s*image\s*<\/\1>/gi,
+      ''
+    )
+    .replace(
+      /<(p|div)[^>]*>\s*Generate\s+one\s+branded\s+visual\s+for\s+this\s+position\.?\s*<\/\1>/gi,
+      ''
+    )
+    .trim();
+}
 
 function mediaSpec(piece: Piece) {
 
@@ -392,7 +403,11 @@ export default function StudioPage() {
 
   const[viewId,setViewId]=useState<string|null>(null);
 
-  const[schedId,setSchedId]=useState<string|null>(null);
+const [editId,setEditId]=useState<string|null>(null);
+const [editTitle,setEditTitle]=useState('');
+const [editHtml,setEditHtml]=useState('');
+
+const[schedId,setSchedId]=useState<string|null>(null);
 
   const [cancelBusy,setCancelBusy]=useState(false);const[regenerateBusy,setRegenerateBusy]=useState(false);const[canRegenerate,setCanRegenerate]=useState(false);const[showUpgrade,setShowUpgrade]=useState(false);const[schedDate,setSchedDate]=useState('');const[schedTime,setSchedTime]=useState('10:00');
 
@@ -1093,7 +1108,98 @@ export default function StudioPage() {
   const cnt = (f: string) => filtered.filter(x => f === 'all' || x.channel === f).length;
 
   const vp = viewId ? piece(viewId) : undefined;
+const openEditor = (p: Piece) => {
+  setEditId(p.id);
+  setEditTitle(p.title || '');
+  setEditHtml(p.bodyHtml || '');
+};
 
+const closeEditor = () => {
+  setEditId(null);
+  setEditTitle('');
+  setEditHtml('');
+};
+
+const saveEditor = async () => {
+  if (!editId) return;
+
+  const updatedSections = { ...sectionsRef.current };
+
+  for (const [section, list] of Object.entries(updatedSections)) {
+    updatedSections[section] = (list || []).map(item => {
+      if (item.id !== editId) return item;
+
+      const temp = document.createElement('div');
+      temp.innerHTML = editHtml;
+
+      const bodyText = temp.innerText.trim();
+
+      return {
+        ...item,
+        title: editTitle.trim() || item.title,
+        bodyHtml: editHtml,
+        bodyText,
+        wordCount: bodyText
+          ? bodyText.split(/\s+/).length
+          : 0,
+      };
+    });
+  }
+
+  // Make the edited version the current Studio source of truth.
+  set({
+    sections: updatedSections,
+  });
+
+  // Persist the edited version so it survives refresh.
+  if (s.jobRowId && s.projectId) {
+    await persistJobState(
+      s.projectId,
+      s.jobRowId,
+      {
+        sections: updatedSections,
+      }
+    );
+  }
+
+  closeEditor();
+
+  toast('Changes saved');
+};
+
+const formatEditor = (command: string, value?: string) => {
+  document.execCommand(command, false, value);
+};
+
+const downloadPiece = (p: Piece) => {
+  const text = [
+    p.title || '',
+    '',
+    p.bodyText.trim(),
+  ].join('\n');
+
+  const blob = new Blob([text], {
+    type: 'text/plain;charset=utf-8',
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  const filename =
+    (p.title || 'sparrow-content')
+      .replace(/[<>:"/\\|?*]+/g, '-')
+      .trim()
+      .slice(0, 100) || 'sparrow-content';
+
+  link.href = url;
+  link.download = `${filename}.txt`;
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  URL.revokeObjectURL(url);
+};
 
 
   const localDate=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
@@ -1228,13 +1334,7 @@ export default function StudioPage() {
 
           </div>
 
-          <button className="btn btn-ghost btn-sm" style={{marginLeft:'auto'}} onClick={()=>{
-
-            const text = channelPieces.map(p => p.title + '\n\n' + p.bodyText).join('\n\n---\n\n');
-
-            copyText(text).then(()=>toast('All '+channel+' content copied'));
-
-          }}>Copy all</button>
+          
 
         </div>
 
@@ -1274,19 +1374,67 @@ export default function StudioPage() {
 
                   </div>
 
-                  <div style={{display:'flex',gap:6,flexShrink:0}}>
+                  <div
+  style={{
+    display: 'flex',
+    gap: 6,
+    flexShrink: 0,
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+  }}
+>
+  <button
+    className="btn btn-ghost btn-sm"
+    onClick={() => openEditor(p)}
+  >
+    Edit
+  </button>
 
-                    <button className="btn btn-ghost btn-sm" onClick={()=>{copyText(p.title+'\n\n'+p.bodyText).then(()=>toast('Copied'))}}>Copy piece</button>
+  <button
+    className="btn btn-ghost btn-sm"
+    onClick={() => downloadPiece(p)}
+  >
+    Download
+  </button>
 
-                    <button className="btn btn-primary btn-sm studio-schedule-button" onClick={()=>openSched(p.id)}>{s.schedule[p.id]?'Move':'Schedule'}</button>
+  <button
+    className="btn btn-ghost btn-sm"
+    onClick={() => {
+      toast(
+        p.section === 'blogs'
+          ? 'WordPress import will be connected here.'
+          : `Import destination for ${p.channel} will be connected here.`
+      );
+    }}
+  >
+    Import
+  </button>
 
-                    <button className="btn btn-ghost btn-sm btn-icon" onClick={()=>setViewId(p.id)} aria-label="Expand">
+  <button
+    className="btn btn-primary btn-sm studio-schedule-button"
+    onClick={() => openSched(p.id)}
+  >
+    {s.schedule[p.id] ? 'Move' : 'Schedule'}
+  </button>
 
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-
-                    </button>
-
-                  </div>
+  <button
+    className="btn btn-ghost btn-sm btn-icon"
+    onClick={() => setViewId(p.id)}
+    aria-label="Expand"
+  >
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M15 3h6v6M9 21H3v-6M21 3l7-7M3 21l7-7" />
+    </svg>
+  </button>
+</div>
 
                 </div>
 
@@ -1318,26 +1466,594 @@ export default function StudioPage() {
 
   {/* Detail modal */}
 
-  <Modal open={!!vp} onClose={()=>setViewId(null)}>{vp&&<>
+<Modal open={!!vp} onClose={() => setViewId(null)}>
+  {vp && (
+    <>
+      <div className="m-head">
+        <div style={{ flex: 1 }}>
+          <Chip channel={vp.channel} />
 
-    <div className="m-head"><div style={{flex:1}}>
+          <span className="fmt" style={{ marginLeft: 6 }}>
+            {vp.format || vp.section}
+          </span>
 
-      <Chip channel={vp.channel}/><span className="fmt" style={{marginLeft:6}}>{vp.format||vp.section}</span>
+          <h2
+            style={{
+              fontSize: 20,
+              fontWeight: 800,
+              letterSpacing: '-.02em',
+              margin: '8px 0 0',
+            }}
+          >
+            {vp.title}
+          </h2>
+        </div>
 
-      <h2 style={{fontSize:20,fontWeight:800,letterSpacing:'-.02em',margin:'8px 0 0'}}>{vp.title}</h2>
+        <button
+          className="btn btn-ghost btn-icon"
+          onClick={() => setViewId(null)}
+          aria-label="Close"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+          >
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
 
-    </div><button className="btn btn-ghost btn-icon" onClick={()=>setViewId(null)} aria-label="Close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div className="m-body">
+  {s.schedule[vp.id] && (
+    <div className="banner" style={{ margin: 0 }}>
+      Scheduled for{' '}
+      {fmtDate(
+        new Date(s.schedule[vp.id].date + 'T00:00')
+      )}{' '}
+      at {fmtTime(s.schedule[vp.id].time)}
+    </div>
+  )}
 
-    <div className="m-body">{s.schedule[vp.id]&&<div className="banner" style={{margin:0}}>Scheduled for {fmtDate(new Date(s.schedule[vp.id].date+'T00:00'))} at {fmtTime(s.schedule[vp.id].time)}</div>}{(mediaState[vp.id]?.url||vp.mediaUrl)&&<div className="modal-media-wrap"><MediaView url={String(mediaState[vp.id]?.url||vp.mediaUrl)} type={mediaState[vp.id]?.type||vp.mediaType} alt={vp.title}/></div>}<div className="m-content" dangerouslySetInnerHTML={{__html: sanitizeHtml(vp.bodyHtml)}}/></div>
+  {(mediaState[vp.id]?.url || vp.mediaUrl) && (
+    <div className="modal-media-wrap">
+      <MediaView
+        url={String(
+          mediaState[vp.id]?.url || vp.mediaUrl
+        )}
+        type={
+          mediaState[vp.id]?.type ||
+          vp.mediaType
+        }
+        alt={vp.title}
+      />
+    </div>
+  )}
 
-    <div className="m-foot"><button className="btn btn-ghost" onClick={()=>{copyText(vp.title+'\n\n'+vp.bodyText).then(()=>toast('Copied'))}}>Copy text</button><button className="btn btn-primary" onClick={()=>openSched(vp.id)}>{s.schedule[vp.id]?'Move on calendar':'Schedule'}</button></div>
+  <div
+    className="m-content"
+    dangerouslySetInnerHTML={{
+      __html: sanitizeHtml(
+  cleanVisibleContent(vp.bodyHtml)
+),
+    }}
+  />
+</div>
 
-  </>}</Modal>
+<div className="m-foot">
+  <button
+    className="btn btn-primary"
+    onClick={() => openSched(vp.id)}
+  >
+    {s.schedule[vp.id]
+      ? 'Move on calendar'
+      : 'Schedule'}
+  </button>
+</div>
+</>
+)}
+</Modal>
 
 
+{/* Edit modal */}
 
-  {schedId&&piece(schedId)&&<TimePicker piece={piece(schedId)!} initDate={schedDate} initTime={schedTime} hasExisting={!!s.schedule[schedId]} onSave={saveSched} onRemove={removeSched} onClose={()=>setSchedId(null)}/>}
+<Modal open={!!editId} onClose={closeEditor}>
+  <div className="m-head">
+    <div style={{ flex: 1 }}>
+      <span className="fmt">EDIT CONTENT</span>
 
-  </div>;
+      <input
+        className="input"
+        value={editTitle}
+        onChange={e =>
+          setEditTitle(e.target.value)
+        }
+        style={{
+          width: '100%',
+          marginTop: 8,
+          fontSize: 20,
+          fontWeight: 800,
+        }}
+      />
+    </div>
+
+    <button
+      className="btn btn-ghost btn-icon"
+      onClick={closeEditor}
+      aria-label="Close"
+    >
+      ×
+    </button>
+  </div>
+
+  <div className="m-body">
+
+    {/* EDITOR TOOLBAR */}
+
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 6,
+        paddingBottom: 12,
+        borderBottom: '1px solid var(--line)',
+        marginBottom: 14,
+      }}
+    >
+
+      {/* Font family */}
+
+      <select
+        className="select"
+        defaultValue="Arial"
+        onChange={e =>
+          formatEditor(
+            'fontName',
+            e.target.value
+          )
+        }
+      >
+        <option value="Arial">
+          Arial
+        </option>
+
+        <option value="Georgia">
+          Georgia
+        </option>
+
+        <option value="Times New Roman">
+          Times New Roman
+        </option>
+
+        <option value="Verdana">
+          Verdana
+        </option>
+
+        <option value="Tahoma">
+          Tahoma
+        </option>
+
+        <option value="Courier New">
+          Courier New
+        </option>
+      </select>
+
+
+      {/* Font size */}
+
+      <select
+        className="select"
+        defaultValue=""
+        onChange={e => {
+          if (e.target.value) {
+            formatEditor(
+              'fontSize',
+              e.target.value
+            );
+
+            e.target.value = '';
+          }
+        }}
+      >
+        <option value="">
+          Font size
+        </option>
+
+        <option value="1">
+          10px
+        </option>
+
+        <option value="2">
+          12px
+        </option>
+
+        <option value="3">
+          14px
+        </option>
+
+        <option value="4">
+          16px
+        </option>
+
+        <option value="5">
+          18px
+        </option>
+
+        <option value="6">
+          24px
+        </option>
+
+        <option value="7">
+          32px
+        </option>
+      </select>
+
+
+      {/* Bold */}
+
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() =>
+          formatEditor('bold')
+        }
+        title="Bold"
+      >
+        <strong>B</strong>
+      </button>
+
+
+      {/* Italic */}
+
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() =>
+          formatEditor('italic')
+        }
+        title="Italic"
+      >
+        <em>I</em>
+      </button>
+
+
+      {/* Underline */}
+
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() =>
+          formatEditor('underline')
+        }
+        title="Underline"
+      >
+        <u>U</u>
+      </button>
+
+
+      {/* Strikethrough */}
+
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() =>
+          formatEditor('strikeThrough')
+        }
+        title="Strikethrough"
+      >
+        <s>S</s>
+      </button>
+
+
+      {/* H1 */}
+
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() =>
+          formatEditor(
+            'formatBlock',
+            'h1'
+          )
+        }
+      >
+        H1
+      </button>
+
+
+      {/* H2 */}
+
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() =>
+          formatEditor(
+            'formatBlock',
+            'h2'
+          )
+        }
+      >
+        H2
+      </button>
+
+
+      {/* H3 */}
+
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() =>
+          formatEditor(
+            'formatBlock',
+            'h3'
+          )
+        }
+      >
+        H3
+      </button>
+
+
+      {/* Bullet list */}
+
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() =>
+          formatEditor(
+            'insertUnorderedList'
+          )
+        }
+      >
+        • List
+      </button>
+
+
+      {/* Numbered list */}
+
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() =>
+          formatEditor(
+            'insertOrderedList'
+          )
+        }
+      >
+        1. List
+      </button>
+
+
+      {/* Align left */}
+
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() =>
+          formatEditor(
+            'justifyLeft'
+          )
+        }
+        title="Align left"
+      >
+        ←
+      </button>
+
+
+      {/* Align center */}
+
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() =>
+          formatEditor(
+            'justifyCenter'
+          )
+        }
+        title="Align center"
+      >
+        ↔
+      </button>
+
+
+      {/* Align right */}
+
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() =>
+          formatEditor(
+            'justifyRight'
+          )
+        }
+        title="Align right"
+      >
+        →
+      </button>
+
+
+      {/* Text colour */}
+
+      <label
+        className="btn btn-ghost btn-sm"
+        title="Text colour"
+        style={{
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 5,
+        }}
+      >
+        A
+
+        <input
+          type="color"
+          defaultValue="#111111"
+          onChange={e =>
+            formatEditor(
+              'foreColor',
+              e.target.value
+            )
+          }
+          style={{
+            width: 20,
+            height: 20,
+            padding: 0,
+            border: 0,
+            cursor: 'pointer',
+          }}
+        />
+      </label>
+
+
+      {/* Highlight colour */}
+
+      <label
+        className="btn btn-ghost btn-sm"
+        title="Highlight colour"
+        style={{
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 5,
+        }}
+      >
+        <span
+          style={{
+            background: '#fff59d',
+            padding: '0 3px',
+          }}
+        >
+          H
+        </span>
+
+        <input
+          type="color"
+          defaultValue="#fff59d"
+          onChange={e =>
+            formatEditor(
+              'hiliteColor',
+              e.target.value
+            )
+          }
+          style={{
+            width: 20,
+            height: 20,
+            padding: 0,
+            border: 0,
+            cursor: 'pointer',
+          }}
+        />
+      </label>
+
+
+      {/* Undo */}
+
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() =>
+          formatEditor('undo')
+        }
+        title="Undo"
+      >
+        ↶
+      </button>
+
+
+      {/* Redo */}
+
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() =>
+          formatEditor('redo')
+        }
+        title="Redo"
+      >
+        ↷
+      </button>
+
+
+      {/* Clear formatting */}
+
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() =>
+          formatEditor(
+            'removeFormat'
+          )
+        }
+        title="Clear formatting"
+      >
+        Clear
+      </button>
+
+    </div>
+
+
+    {/* RICH TEXT EDITOR */}
+
+    <div
+      className="studio-rich-editor"
+      contentEditable
+      suppressContentEditableWarning
+      dangerouslySetInnerHTML={{
+        __html: sanitizeHtml(editHtml),
+      }}
+      onInput={e =>
+        setEditHtml(
+          e.currentTarget.innerHTML
+        )
+      }
+      style={{
+        minHeight: 420,
+        maxHeight: '65vh',
+        overflowY: 'auto',
+        padding: 20,
+        border: '1px solid var(--line)',
+        borderRadius: 12,
+        background: '#fff',
+        outline: 'none',
+        lineHeight: 1.7,
+      }}
+    />
+
+  </div>
+
+  <div className="m-foot">
+    <button
+      className="btn btn-ghost"
+      onClick={closeEditor}
+    >
+      Cancel
+    </button>
+
+    <button
+      className="btn btn-primary"
+      onClick={saveEditor}
+    >
+      Save changes
+    </button>
+  </div>
+</Modal>
+
+
+{schedId && piece(schedId) && (
+  <TimePicker
+    piece={piece(schedId)!}
+    initDate={schedDate}
+    initTime={schedTime}
+    hasExisting={!!s.schedule[schedId]}
+    onSave={saveSched}
+    onRemove={removeSched}
+    onClose={() => setSchedId(null)}
+  />
+)}
+
+</div>;
 
 }
