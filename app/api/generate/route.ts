@@ -291,18 +291,32 @@ export async function POST(req: NextRequest) {
 
             const params = new URLSearchParams();
 
-            const regenerationExtra = data.regenerate
-              ? [
-                  data.extra,
-                  `REGENERATION MODE: Create a materially improved new version of the content. Do not copy the previous output verbatim. Improve clarity, hooks, structure, platform fit, specificity and usefulness while preserving verified company facts.
+/*
+ * n8n expects client_session_id to identify the client/company
+ * whose configuration should be used.
+ *
+ * Sparrow does not have a separate client_session_id column.
+ * The stable company identifier is projects.id, so we use the
+ * saved project UUID as the n8n client session ID.
+ *
+ * Keep project_id as well because Sparrow uses it for its own
+ * Supabase job/project handling.
+ */
+params.append('project_id', projectId);
+params.append('client_session_id', projectId);
+
+const regenerationExtra = data.regenerate
+  ? [
+      data.extra,
+      `REGENERATION MODE: Create a materially improved new version of the content. Do not copy the previous output verbatim. Improve clarity, hooks, structure, platform fit, specificity and usefulness while preserving verified company facts.
 
 PREVIOUS GENERATED CONTENT:
 
 ${data.previous_content}`,
-                ]
-                  .filter(Boolean)
-                  .join('\n\n')
-              : data.extra;
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+  : data.extra;
 
             params.append(
               'company_name',
