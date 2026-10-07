@@ -559,23 +559,38 @@ params.append(
                 'generated_html',
               ]) || rawBody;
 
-            const jobId =
-              firstString([
-                'job_id',
-                'live_job_id',
-                'jobId',
-                'liveJobId',
-              ]) ||
-              html.match(
-                /[?&]job_id=([a-zA-Z0-9_-]+)/
-              )?.[1] ||
-              html.match(
-                /job_id%3D([a-zA-Z0-9_-]+)/
-              )?.[1] ||
-              rawBody.match(
-                /[?&]job_id=([a-zA-Z0-9_-]+)/
-              )?.[1] ||
-              '';
+            const extractJobId = (value: string): string => {
+  const source = String(value || '');
+
+  const patterns = [
+    /[?&](?:job_id|live_job_id)=([^&"'<>\\s]+)/i,
+    /(?:job_id|live_job_id)%3D([^&"'<>\\s]+)/i,
+    /(?:job_id|live_job_id)\\s*[:=]\\s*["']?([^"',\\s}]+)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = source.match(pattern);
+    if (!match?.[1]) continue;
+
+    try {
+      return decodeURIComponent(
+        match[1]
+          .replace(/&amp;/gi, '&')
+          .replace(/&quot;/gi, '"')
+      ).trim();
+    } catch {
+      return match[1].trim();
+    }
+  }
+
+  return '';
+};
+
+const jobId =
+  firstString(['job_id', 'live_job_id', 'jobId', 'liveJobId']) ||
+  extractJobId(html) ||
+  extractJobId(rawBody) ||
+  '';
 
             if (!jobId) {
               throw new Error(
