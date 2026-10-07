@@ -596,18 +596,13 @@ if (
              * - direct job-... IDs
              * - UUID fallback for older workflows
              */
-            const extractJobId = (
-  value: string
-): string => {
+            const extractJobId = (value: string): string => {
   const source = String(value || '');
 
   if (!source.trim()) {
     return '';
   }
 
-  /*
-   * Decode common HTML / JSON escaping.
-   */
   let normalised = source
     .replace(/&amp;/gi, '&')
     .replace(/&quot;/gi, '"')
@@ -618,13 +613,9 @@ if (
     .replace(/\\u0022/gi, '"')
     .replace(/\\u0027/gi, "'");
 
-  /*
-   * Decode URI encoding repeatedly where possible.
-   */
   for (let i = 0; i < 3; i++) {
     try {
-      const decoded =
-        decodeURIComponent(normalised);
+      const decoded = decodeURIComponent(normalised);
 
       if (decoded === normalised) {
         break;
@@ -637,26 +628,24 @@ if (
   }
 
   /*
-   * CURRENT n8n FORMAT
+   * Latest n8n workflow:
    *
-   * The workflow generates:
+   * job-<timestamp>-<random>
    *
+   * Example:
    * job-1790701728944-ezqdagvw
-   *
-   * This is the strongest possible match.
    */
   const directJobPattern =
     /\bjob-\d{10,}-[a-z0-9_-]{4,}\b/i;
 
-  const directJob =
-    normalised.match(directJobPattern);
+  const directJob = normalised.match(directJobPattern);
 
   if (directJob?.[0]) {
     return directJob[0].trim();
   }
 
   /*
-   * Explicit query parameters.
+   * Explicit job fields.
    */
   const queryPatterns = [
     /[?&](?:job_id|live_job_id|jobId|liveJobId)=([^&#"'<> \t\r\n]+)/i,
@@ -667,38 +656,31 @@ if (
   ];
 
   for (const pattern of queryPatterns) {
-    const match =
-      normalised.match(pattern);
+    const match = normalised.match(pattern);
 
-    if (match?.[1]) {
-      const candidate =
-        match[1]
-          .replace(
-            /[\\'"<>]/g,
-            ''
-          )
-          .trim();
+    if (!match?.[1]) {
+      continue;
+    }
 
-      if (
-        candidate &&
-        candidate.length >= 6 &&
-        candidate.length <= 200 &&
-        !/^https?:\/\//i.test(
-          candidate
-        )
-      ) {
-        return candidate;
-      }
+    const candidate = match[1]
+      .replace(/[\\'"<>]/g, '')
+      .trim();
+
+    if (
+      candidate &&
+      candidate.length >= 6 &&
+      candidate.length <= 200 &&
+      !/^https?:\/\//i.test(candidate)
+    ) {
+      return candidate;
     }
   }
 
   /*
-   * Explicit iframe extraction.
+   * Current n8n instant-results HTML contains iframes
+   * pointing to:
    *
-   * Handles:
-   *
-   * <iframe src="...job_id=...">
-   * <iframe data-src="...job_id=...">
+   * /ai-company-content-live-view?job_id=...
    */
   const iframePattern =
     /<iframe\b[^>]*(?:src|data-src)\s*=\s*["']([^"']+)["']/gi;
@@ -708,33 +690,34 @@ if (
     | null;
 
   while (
-    (iframeMatch =
-      iframePattern.exec(
-        normalised
-      )) !== null
+    (iframeMatch = iframePattern.exec(normalised)) !== null
   ) {
-    const src =
-      iframeMatch[1] || '';
+    const src = iframeMatch[1] || '';
 
-    const jobInSrc =
-      src.match(
-        /[?&](?:job_id|live_job_id|jobId|liveJobId)=([^&#"'\s]+)/i
-      );
+    const jobInSrc = src.match(
+      /[?&](?:job_id|live_job_id|jobId|liveJobId)=([^&#"'\s]+)/i
+    );
 
     if (jobInSrc?.[1]) {
       try {
-        return decodeURIComponent(
+        const decoded = decodeURIComponent(
           jobInSrc[1]
         ).trim();
+
+        if (decoded) {
+          return decoded;
+        }
       } catch {
-        return jobInSrc[1].trim();
+        const fallback = jobInSrc[1].trim();
+
+        if (fallback) {
+          return fallback;
+        }
       }
     }
 
     const directJobInSrc =
-      src.match(
-        directJobPattern
-      );
+      src.match(directJobPattern);
 
     if (directJobInSrc?.[0]) {
       return directJobInSrc[0].trim();
@@ -742,9 +725,7 @@ if (
   }
 
   /*
-   * Search the entire response again for a job ID,
-   * including HTML attributes that may not have been
-   * captured by the iframe regex.
+   * Final direct search.
    */
   const globalJobMatches =
     normalised.match(
@@ -759,7 +740,7 @@ if (
   }
 
   /*
-   * UUID fallback for older workflow versions.
+   * Compatibility with older workflows that used UUIDs.
    */
   const uuidPattern =
     /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
@@ -769,24 +750,19 @@ if (
     | null;
 
   while (
-    (uuidMatch =
-      uuidPattern.exec(
-        normalised
-      )) !== null
+    (uuidMatch = uuidPattern.exec(normalised)) !== null
   ) {
-    const start =
-      Math.max(
-        0,
-        uuidMatch.index - 300
-      );
+    const start = Math.max(
+      0,
+      uuidMatch.index - 300
+    );
 
-    const end =
-      Math.min(
-        normalised.length,
-        uuidMatch.index +
-          uuidMatch[0].length +
-          300
-      );
+    const end = Math.min(
+      normalised.length,
+      uuidMatch.index +
+        uuidMatch[0].length +
+        300
+    );
 
     const surrounding =
       normalised
@@ -794,27 +770,13 @@ if (
         .toLowerCase();
 
     if (
-      surrounding.includes(
-        'job_id'
-      ) ||
-      surrounding.includes(
-        'live_job'
-      ) ||
-      surrounding.includes(
-        'live-job'
-      ) ||
-      surrounding.includes(
-        'livejob'
-      ) ||
-      surrounding.includes(
-        'jobid'
-      ) ||
-      surrounding.includes(
-        'live-view'
-      ) ||
-      surrounding.includes(
-        'live-results'
-      )
+      surrounding.includes('job_id') ||
+      surrounding.includes('live_job') ||
+      surrounding.includes('live-job') ||
+      surrounding.includes('livejob') ||
+      surrounding.includes('jobid') ||
+      surrounding.includes('live-view') ||
+      surrounding.includes('live-results')
     ) {
       return uuidMatch[0].trim();
     }
@@ -828,10 +790,10 @@ if (
              */
            const explicitJobId =
   firstString([
-    'job_id',
     'live_job_id',
-    'jobId',
+    'job_id',
     'liveJobId',
+    'jobId',
   ]);
 
 const jobId =
@@ -839,6 +801,22 @@ const jobId =
   extractJobId(html) ||
   extractJobId(rawBody) ||
   '';
+
+console.log(
+  '[SPARROW FINAL JOB ID]',
+  {
+    requestId,
+    contentType:
+      res.headers.get('content-type') || '',
+    responseStatus: res.status,
+    explicitJobId:
+      explicitJobId || null,
+    extractedJobId:
+      jobId || null,
+    htmlLength: html.length,
+    rawBodyLength: rawBody.length,
+  }
+);
 
 console.log(
   '[SPARROW JOB ID EXTRACTION]',
