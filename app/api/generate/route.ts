@@ -177,7 +177,9 @@ export async function POST(req: NextRequest) {
       throw new Error('Invalid project_id.');
     }
 
-    // Phase 6: Prevent duplicate generation from double-clicks
+    /*
+     * Phase 6: Prevent duplicate generation from double-clicks
+     */
     if (accessToken && projectId) {
       const userId =
         authenticatedUserId ||
@@ -223,6 +225,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    /*
+     * Create the Supabase generation job before calling n8n.
+     */
     try {
       const job = await createJob(
         projectId,
@@ -290,7 +295,9 @@ export async function POST(req: NextRequest) {
               ? [
                   data.extra,
                   `REGENERATION MODE: Create a materially improved new version of the content. Do not copy the previous output verbatim. Improve clarity, hooks, structure, platform fit, specificity and usefulness while preserving verified company facts.
+
 PREVIOUS GENERATED CONTENT:
+
 ${data.previous_content}`,
                 ]
                   .filter(Boolean)
@@ -361,13 +368,17 @@ ${data.previous_content}`,
             );
 
             data.platforms.forEach((pl) =>
-  params.append('social_media_platforms', pl)
-);
+              params.append(
+                'social_media_platforms',
+                pl
+              )
+            );
 
-params.append(
-  'selected_content_types',
-  data.platforms.join(',')
-);
+            params.append(
+              'selected_content_types',
+              data.platforms.join(',')
+            );
+
             const endpoint = n8nEndpoint(
               process.env.N8N_GENERATE_PATH!
             );
@@ -387,9 +398,8 @@ params.append(
                     'application/x-www-form-urlencoded',
                 }),
               },
-              Number.isFinite(
-                generateTimeoutMs
-              ) && generateTimeoutMs > 0
+              Number.isFinite(generateTimeoutMs) &&
+                generateTimeoutMs > 0
                 ? generateTimeoutMs
                 : 300_000,
               0
@@ -453,7 +463,9 @@ params.append(
             try {
               parsed = JSON.parse(rawBody);
             } catch {
-              /* n8n may return HTML/text */
+              /*
+               * n8n may return HTML/text.
+               */
             }
 
             /*
@@ -551,6 +563,10 @@ params.append(
               return walk(parsed);
             };
 
+            /*
+             * The new n8n workflow returns the instant
+             * results page as HTML.
+             */
             const html =
               firstString([
                 'html',
@@ -559,216 +575,399 @@ params.append(
                 'generated_html',
               ]) || rawBody;
 
-            const extractJobId = (value: string): string => {
-  const source = String(value || '');
+            /*
+             * --------------------------------------------------
+             * ROBUST n8n JOB-ID EXTRACTION
+             * --------------------------------------------------
+             *
+             * The current n8n workflow generates IDs like:
+             *
+             *   job-1790701728944-ezqdagvw
+             *
+             * and places them in the instant-results HTML,
+             * usually inside an iframe:
+             *
+             *   ai-company-content-live-view?job_id=...
+             *
+             * This extractor supports:
+             *
+             * - job_id
+             * - live_job_id
+             * - jobId
+             * - liveJobId
+             * - URL encoded values
+             * - HTML encoded values
+             * - escaped JSON/HTML values
+             * - iframe src/data-src
+             * - direct job-... IDs
+             * - UUID fallback for older workflows
+             */
+            const extractJobId = (
+              value: string
+            ): string => {
+              const source = String(
+                value || ''
+              );
 
-  /*
-   * n8n returns the instant-results page as HTML.
-   * The live job ID may therefore be present as:
-   * - a normal query parameter
-   * - URL encoded
-   * - HTML encoded
-   * - inside an iframe src
-   * - inside an escaped URL
-   * - inside a live-result path
-   */
+              const normalised =
+                source
+                  .replace(
+                    /&amp;/gi,
+                    '&'
+                  )
+                  .replace(
+                    /&quot;/gi,
+                    '"'
+                  )
+                  .replace(
+                    /&#39;/gi,
+                    "'"
+                  )
+                  .replace(
+                    /&#x27;/gi,
+                    "'"
+                  )
+                  .replace(
+                    /\\u0026/gi,
+                    '&'
+                  )
+                  .replace(
+                    /\\u003d/gi,
+                    '='
+                  )
+                  .replace(
+                    /\\u0022/gi,
+                    '"'
+                  )
+                  .replace(
+                    /\\u0027/gi,
+                    "'"
+                  );
 
-  const normalised = source
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/&#x27;/gi, "'")
-    .replace(/\\u0026/gi, '&')
-    .replace(/\\u003d/gi, '=')
-    .replace(/\\u0022/gi, '"')
-    .replace(/\\u0027/gi, "'");
+              const candidates: string[] = [];
 
-  const candidates: string[] = [];
+              const addCandidate = (
+                value: string | undefined
+              ) => {
+                if (!value) return;
 
-  const addCandidate = (value: string | undefined) => {
-    if (!value) return;
+                let decoded =
+                  value.trim();
 
-    let decoded = value.trim();
+                try {
+                  decoded =
+                    decodeURIComponent(
+                      decoded
+                    );
+                } catch {
+                  // Keep original value if it is not URI encoded.
+                }
 
-    try {
-      decoded = decodeURIComponent(decoded);
-    } catch {
-      // Keep original value if it is not URI encoded.
-    }
+                decoded = decoded
+                  .replace(
+                    /&amp;/gi,
+                    '&'
+                  )
+                  .replace(
+                    /&quot;/gi,
+                    '"'
+                  )
+                  .replace(
+                    /&#39;/gi,
+                    "'"
+                  )
+                  .replace(
+                    /&#x27;/gi,
+                    "'"
+                  )
+                  .replace(
+                    /[\\'"<>]/g,
+                    ''
+                  )
+                  .trim();
 
-    decoded = decoded
-      .replace(/&amp;/gi, '&')
-      .replace(/&quot;/gi, '"')
-      .replace(/&#39;/gi, "'")
-      .replace(/&#x27;/gi, "'")
-      .replace(/[\\'"<>]/g, '')
-      .trim();
+                if (decoded) {
+                  candidates.push(
+                    decoded
+                  );
+                }
+              };
 
-    if (decoded) {
-      candidates.push(decoded);
-    }
-  };
+              /*
+               * 1. Explicit query/JSON parameter formats.
+               */
+              const explicitPatterns = [
+                /[?&](?:job_id|live_job_id|jobId|liveJobId)=([^&"'<>\s]+)/i,
 
-  /*
-   * 1. Explicit job ID parameters.
-   */
-  const explicitPatterns = [
-    /[?&](?:job_id|live_job_id)=([^&"'<>\\s]+)/i,
-    /(?:job_id|live_job_id)%3D([^&"'<>\\s]+)/i,
-    /(?:job_id|live_job_id)\\s*[:=]\\s*["']?([^"',\\s}<>]+)/i,
-  ];
+                /(?:job_id|live_job_id|jobId|liveJobId)%3D([^&"'<>\s]+)/i,
 
-  for (const pattern of explicitPatterns) {
-    const match = normalised.match(pattern);
+                /(?:job_id|live_job_id|jobId|liveJobId)\s*[:=]\s*["']?([^"',\s}<>]+)/i,
 
-    if (match?.[1]) {
-      addCandidate(match[1]);
-    }
-  }
+                /\bjob-\d{10,}-[a-z0-9_-]{4,}\b/i,
+              ];
 
-  /*
-   * 2. Inspect iframe URLs generated by n8n.
-   */
-  const iframePattern =
-    /<iframe[^>]+(?:src|data-src)=["']([^"']+)["']/gi;
+              for (
+                const pattern of explicitPatterns
+              ) {
+                const match =
+                  normalised.match(
+                    pattern
+                  );
 
-  let iframeMatch: RegExpExecArray | null;
+                if (
+                  match?.[1] ||
+                  match?.[0]
+                ) {
+                  addCandidate(
+                    match[1] ||
+                      match[0]
+                  );
+                }
+              }
 
-  while ((iframeMatch = iframePattern.exec(normalised)) !== null) {
-    const src = iframeMatch[1];
+              /*
+               * 2. Inspect iframe URLs generated by n8n.
+               */
+              const iframePattern =
+                /<iframe[^>]+(?:src|data-src)=["']([^"']+)["']/gi;
 
-    const queryMatch = src.match(
-      /[?&](?:job_id|live_job_id|jobId|liveJobId)=([^&#"'\s]+)/i
-    );
+              let iframeMatch:
+                | RegExpExecArray
+                | null;
 
-    if (queryMatch?.[1]) {
-      addCandidate(queryMatch[1]);
-    }
+              while (
+                (iframeMatch =
+                  iframePattern.exec(
+                    normalised
+                  )) !== null
+              ) {
+                const src =
+                  iframeMatch[1];
 
-    try {
-      const decodedSrc = decodeURIComponent(src);
+                const queryMatch =
+                  src.match(
+                    /[?&](?:job_id|live_job_id|jobId|liveJobId)=([^&#"'\s]+)/i
+                  );
 
-      const decodedQueryMatch = decodedSrc.match(
-        /[?&](?:job_id|live_job_id|jobId|liveJobId)=([^&#"'\s]+)/i
-      );
+                if (queryMatch?.[1]) {
+                  addCandidate(
+                    queryMatch[1]
+                  );
+                }
 
-      if (decodedQueryMatch?.[1]) {
-        addCandidate(decodedQueryMatch[1]);
-      }
-    } catch {
-      // Ignore malformed URI encoding.
-    }
-  }
+                try {
+                  const decodedSrc =
+                    decodeURIComponent(
+                      src
+                    );
 
-  /*
-   * 3. Check live-result URL path formats.
-   */
-  const livePathPatterns = [
-    /live-results[^"'<>\\s/]*\/([0-9a-f-]{8,})/i,
-    /live-content-jobs\/([0-9a-f-]{8,})/i,
-    /live-view[^"'<>\\s/]*\/([0-9a-f-]{8,})/i,
-  ];
+                  const decodedQueryMatch =
+                    decodedSrc.match(
+                      /[?&](?:job_id|live_job_id|jobId|liveJobId)=([^&#"'\s]+)/i
+                    );
 
-  for (const pattern of livePathPatterns) {
-    const match = normalised.match(pattern);
+                  if (
+                    decodedQueryMatch?.[1]
+                  ) {
+                    addCandidate(
+                      decodedQueryMatch[1]
+                    );
+                  }
+                } catch {
+                  // Ignore malformed URI encoding.
+                }
+              }
 
-    if (match?.[1]) {
-      addCandidate(match[1]);
-    }
-  }
+              /*
+               * 3. Check possible live-result URL path formats.
+               */
+              const livePathPatterns = [
+                /live-results[^"'<>\s/]*\/([0-9a-z_-]{6,})/i,
 
-  /*
-   * 4. UUID fallback.
-   *
-   * Only accept a UUID when it appears close to a
-   * live/job-related keyword.
-   */
-  const uuidPattern =
-    /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
+                /live-content-jobs?\/([0-9a-z_-]{6,})/i,
 
-  let uuidMatch: RegExpExecArray | null;
+                /live-view[^"'<>\s/]*\/([0-9a-z_-]{6,})/i,
+              ];
 
-  while ((uuidMatch = uuidPattern.exec(normalised)) !== null) {
-    const start = Math.max(0, uuidMatch.index - 250);
-    const end = Math.min(
-      normalised.length,
-      uuidMatch.index + uuidMatch[0].length + 250
-    );
+              for (
+                const pattern of livePathPatterns
+              ) {
+                const match =
+                  normalised.match(
+                    pattern
+                  );
 
-    const surrounding = normalised
-      .slice(start, end)
-      .toLowerCase();
+                if (match?.[1]) {
+                  addCandidate(
+                    match[1]
+                  );
+                }
+              }
 
-    if (
-      surrounding.includes('live_job') ||
-      surrounding.includes('live-job') ||
-      surrounding.includes('livejob') ||
-      surrounding.includes('job_id') ||
-      surrounding.includes('job-id') ||
-      surrounding.includes('jobid') ||
-      surrounding.includes('live-results') ||
-      surrounding.includes('live-content-jobs') ||
-      surrounding.includes('live-view')
-    ) {
-      addCandidate(uuidMatch[0]);
-    }
-  }
+              /*
+               * 4. UUID fallback for older workflows.
+               *
+               * Only accept a UUID when it appears close
+               * to a live/job-related keyword.
+               */
+              const uuidPattern =
+                /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
 
-  /*
-   * Return the first plausible candidate.
-   */
-  for (const candidate of candidates) {
-    if (
-      candidate.length >= 6 &&
-      candidate.length <= 200 &&
-      !/^https?:\/\//i.test(candidate)
-    ) {
-      return candidate;
-    }
-  }
+              let uuidMatch:
+                | RegExpExecArray
+                | null;
 
-  return '';
-};
+              while (
+                (uuidMatch =
+                  uuidPattern.exec(
+                    normalised
+                  )) !== null
+              ) {
+                const start =
+                  Math.max(
+                    0,
+                    uuidMatch.index -
+                      250
+                  );
 
-const jobId =
-  firstString([
-    'job_id',
-    'live_job_id',
-    'jobId',
-    'liveJobId',
-  ]) ||
-  extractJobId(html) ||
-  extractJobId(rawBody) ||
-  '';
+                const end =
+                  Math.min(
+                    normalised.length,
+                    uuidMatch.index +
+                      uuidMatch[0]
+                        .length +
+                      250
+                  );
 
-if (!jobId) {
-  Sentry.captureMessage(
-    'n8n response did not contain a detectable live job ID',
-    {
-      level: 'error',
-      tags: {
-        area: 'n8n',
-        operation: 'extract_job_id',
-        request_id: requestId,
-      },
-      extra: {
-        response_status: res.status,
-        response_content_type:
-          res.headers.get('content-type') || '',
-        response_length: rawBody.length,
-        response_preview: rawBody
-          .replace(/\s+/g, ' ')
-          .slice(0, 2000),
-      },
-    }
-  );
+                const surrounding =
+                  normalised
+                    .slice(
+                      start,
+                      end
+                    )
+                    .toLowerCase();
 
-  throw new Error(
-    'Content generation did not return a valid job ID. Please retry.'
-  );
-}
-            let parsedBrandTheme: unknown =
-              null;
+                if (
+                  surrounding.includes(
+                    'live_job'
+                  ) ||
+                  surrounding.includes(
+                    'live-job'
+                  ) ||
+                  surrounding.includes(
+                    'livejob'
+                  ) ||
+                  surrounding.includes(
+                    'job_id'
+                  ) ||
+                  surrounding.includes(
+                    'job-id'
+                  ) ||
+                  surrounding.includes(
+                    'jobid'
+                  ) ||
+                  surrounding.includes(
+                    'live-results'
+                  ) ||
+                  surrounding.includes(
+                    'live-content-jobs'
+                  ) ||
+                  surrounding.includes(
+                    'live-view'
+                  )
+                ) {
+                  addCandidate(
+                    uuidMatch[0]
+                  );
+                }
+              }
+
+              /*
+               * Return the first plausible candidate.
+               */
+              for (
+                const candidate of candidates
+              ) {
+                if (
+                  candidate.length >=
+                    6 &&
+                  candidate.length <=
+                    200 &&
+                  !/^https?:\/\//i.test(
+                    candidate
+                  )
+                ) {
+                  return candidate;
+                }
+              }
+
+              return '';
+            };
+
+            /*
+             * Prefer an explicitly returned JSON job ID.
+             * Otherwise inspect the HTML/raw n8n response.
+             */
+            const jobId =
+              firstString([
+                'job_id',
+                'live_job_id',
+                'jobId',
+                'liveJobId',
+              ]) ||
+              extractJobId(html) ||
+              extractJobId(rawBody) ||
+              '';
+
+            if (!jobId) {
+              Sentry.captureMessage(
+                'n8n response did not contain a detectable live job ID',
+                {
+                  level: 'error',
+                  tags: {
+                    area: 'n8n',
+                    operation:
+                      'extract_job_id',
+                    request_id:
+                      requestId,
+                  },
+                  extra: {
+                    response_status:
+                      res.status,
+
+                    response_content_type:
+                      res.headers.get(
+                        'content-type'
+                      ) || '',
+
+                    response_length:
+                      rawBody.length,
+
+                    response_preview:
+                      rawBody
+                        .replace(
+                          /\s+/g,
+                          ' '
+                        )
+                        .slice(
+                          0,
+                          2000
+                        ),
+                  },
+                }
+              );
+
+              throw new Error(
+                'Content generation did not return a valid job ID. Please retry.'
+              );
+            }
+
+            /*
+             * Extract Brand Theme from the n8n response
+             * when available.
+             */
+            let parsedBrandTheme:
+              unknown = null;
 
             if (
               parsed &&
@@ -780,10 +979,12 @@ if (!jobId) {
 
               for (
                 let i = 0;
-                i < queue.length && i < 20;
+                i < queue.length &&
+                i < 20;
                 i++
               ) {
-                const item = queue[i];
+                const item =
+                  queue[i];
 
                 if (
                   !item ||
@@ -820,20 +1021,24 @@ if (!jobId) {
                   break;
                 }
 
-                for (const key of [
-                  'data',
-                  'result',
-                  'body',
-                  'response',
-                  'output',
-                  'json',
-                ]) {
+                for (
+                  const key of [
+                    'data',
+                    'result',
+                    'body',
+                    'response',
+                    'output',
+                    'json',
+                  ]
+                ) {
                   if (
                     obj[key] &&
                     typeof obj[key] ===
                       'object'
                   ) {
-                    queue.push(obj[key]);
+                    queue.push(
+                      obj[key]
+                    );
                   }
                 }
               }
@@ -879,6 +1084,9 @@ if (!jobId) {
                         'Inter, Arial, sans-serif',
                     };
 
+            /*
+             * Store the live job ID in Supabase.
+             */
             if (jobRowId) {
               await updateJob(
                 jobRowId,
@@ -893,12 +1101,16 @@ if (!jobId) {
                 Sentry.captureException(err, {
                   tags: {
                     area: 'supabase',
-                    operation: 'set_job_id',
+                    operation:
+                      'set_job_id',
                   },
                 })
               );
             }
 
+            /*
+             * Create a signed live-view token.
+             */
             const live_view_token =
               createLiveViewToken(
                 jobId,
@@ -983,7 +1195,9 @@ if (!jobId) {
               message
             )
           ? 400
-          : /limit|slots busy/i.test(message)
+          : /limit|slots busy/.test(
+                message
+              )
             ? 429
             : 502;
 
@@ -991,7 +1205,8 @@ if (!jobId) {
       Sentry.captureException(err, {
         tags: {
           route: '/api/generate',
-          jobRowId: jobRowId || 'none',
+          jobRowId:
+            jobRowId || 'none',
         },
       });
     }
