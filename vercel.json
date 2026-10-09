@@ -4,5 +4,11 @@
   "installCommand": "npm ci",
   "regions": [
     "bom1"
+  ],
+  "crons": [
+    {
+      "path": "/api/scheduling/publish",
+      "schedule": "* * * * *"
+    }
   ]
 }

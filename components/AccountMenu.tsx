@@ -82,7 +82,9 @@ export default function AccountMenu({ compact = false }: { compact?: boolean }) 
       <div className="account-plan-row"><span>Account</span><strong className={`account-plan account-plan-${plan}`}>{plan === 'owner' ? 'OWNER' : plan === 'pro' ? 'PRO' : 'FREE'}</strong></div>
       <div className="account-meta-row"><span>Company workspaces</span><strong>{account?.entitlements.maxCompanies == null ? 'Unlimited' : account.entitlements.maxCompanies}</strong></div>
       <div className="account-popover-actions">
-        <a href="/dashboard" onClick={() => setOpen(false)}>Workspace</a>
+        <a href="/profile" onClick={() => setOpen(false)}>Profile</a>
+        <a href="/dashboard" onClick={() => setOpen(false)}>All companies</a>
+        <a href="/analyse?new=1" onClick={() => setOpen(false)}>＋ Add company</a>
         <a href="/pricing" onClick={() => setOpen(false)}>Plans & billing</a>
         <button type="button" onClick={signOut}>Sign out <span>↗</span></button>
       </div>

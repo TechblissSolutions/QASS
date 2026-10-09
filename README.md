@@ -191,3 +191,31 @@ Run `supabase_entitlements_backfill.sql` once after the main schema/migration. I
 - Accepts the native file-backed HTML returned by the current n8n workflow and only marks a section ready when real content cards are parsed.
 - Keeps the existing 4s/8s/12s/20s backoff, visibility pause, Supabase persistence, cancellation behavior, and 20-minute safety limit.
 - No n8n workflow/backend changes are included.
+
+## Local environment
+
+Do not commit `.env.local` or paste its secrets into source control. For the Fixed5/Fixed6 workspace, copy the existing Sparrow local environment file into the **actual extracted project folder** before running the app:
+
+```powershell
+Copy-Item "C:\Users\tanis\Downloads\qass\.env.local" "C:\Users\tanis\OneDrive\Desktop\Sparrow_Scheduling_Phase1-4_Brand_Ready_EditRef_Fixed6\.env.local"
+```
+
+Verify it with:
+
+```powershell
+Test-Path ".env.local"
+```
+
+It must return `True` while PowerShell is inside the Fixed6 folder.
+
+## Scheduling schema
+
+The scheduler uses the existing `scheduled_posts.platforms` JSON column and the related `social_accounts` table. It does **not** require a `scheduled_post_targets` table.
+
+## Scheduling media storage
+
+Run `supabase_scheduling_storage.sql` once in the existing Supabase project to create the `scheduled-media` Storage bucket. The server upload endpoint also checks for the bucket and creates it automatically when `SUPABASE_SERVICE_ROLE_KEY` is available.
+
+## Social OAuth
+
+See `SOCIAL_OAUTH_SETUP.md`. The six platform cards are intentionally independent. A platform without developer credentials is shown as requiring OAuth setup rather than producing a runtime connection error.
