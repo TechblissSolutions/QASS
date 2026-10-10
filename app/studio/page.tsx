@@ -1,5 +1,6 @@
 'use client';
 
+import { cleanGeneratedHtml, cleanGeneratedText, cleanPublishedHtml } from '@/lib/content-cleanup';
 import { useEffect, useRef, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
@@ -20,7 +21,6 @@ import { parseLiveViewHtml, splitIntoCards } from '@/lib/parser';
 
 import Modal from '@/components/Modal';
 
-import TimePicker from '@/components/TimePicker';
 
 import Chip from '@/components/Chip';
 
@@ -33,6 +33,7 @@ import StoreLoading from '@/components/StoreLoading';
 import CompanyHeader from '@/components/CompanyHeader';
 
 import SmartLogo from '@/components/SmartLogo';
+import ScheduleComposer from '@/components/ScheduleComposer';
 
 import { getSupabaseClient } from '@/lib/supabase';
 
@@ -67,7 +68,7 @@ function PlatformIcon({ channel }: { channel: string }) {
 }
 
 function cleanVisibleContent(html: string) {
-  return String(html || '')
+  return cleanPublishedHtml(String(html || '')
     .replace(
       /<(p|div)[^>]*>\s*Blog\s*image\s*<\/\1>/gi,
       ''
@@ -76,12 +77,12 @@ function cleanVisibleContent(html: string) {
       /<(p|div)[^>]*>\s*Generate\s+one\s+branded\s+visual\s+for\s+this\s+position\.?\s*<\/\1>/gi,
       ''
     )
-    .trim();
+    .trim());
 }
 
 function mediaSpec(piece: Piece) {
 
-  const raw = String(piece.bodyText || '');
+  const raw = cleanGeneratedText(String(piece.bodyText || ''));
 
   const type =
   piece.section === 'blogs'
@@ -409,9 +410,11 @@ const [editHtml,setEditHtml]=useState('');
 
 const[schedId,setSchedId]=useState<string|null>(null);
 
-  const [cancelBusy,setCancelBusy]=useState(false);const[regenerateBusy,setRegenerateBusy]=useState(false);const[canRegenerate,setCanRegenerate]=useState(false);const[showUpgrade,setShowUpgrade]=useState(false);const[schedDate,setSchedDate]=useState('');const[schedTime,setSchedTime]=useState('10:00');
+  const [cancelBusy,setCancelBusy]=useState(false);const[regenerateBusy,setRegenerateBusy]=useState(false);const[canRegenerate,setCanRegenerate]=useState(false);const[showUpgrade,setShowUpgrade]=useState(false);
 
   const [mediaState,setMediaState]=useState<Record<string,{url?:string;type?:string;error?:string;busy?:boolean}>>({});
+
+const openSched = (id: string) => { setSchedId(id); };
 
 
 
@@ -889,7 +892,7 @@ const[schedId,setSchedId]=useState<string|null>(null);
 
   const retryGeneration=async()=>{
 
-    if(!s.profile||retryBusy)return;
+    if(!s.profile||retryBusy||!s.prefs.platforms?.length)return;
 
     setRetryBusy(true); setPollError('');
 
@@ -921,15 +924,27 @@ const[schedId,setSchedId]=useState<string|null>(null);
 
   const cancelGeneration=async()=>{
 
-    if(cancelBusy) return;
+    if(cancelBusy || !s.jobId) return;
 
     setCancelBusy(true);
 
     try {
-
-      set({generationStatus:'cancelled'});
-
-      toast('Generation monitoring stopped');
+      // Stop this client from polling immediately and persist the terminal state.
+      // The current n8n integration does not expose an execution-cancel endpoint,
+      // so this cannot terminate work already running inside n8n itself.
+      set({generationStatus:'cancelled', finishedAt:new Date().toISOString()});
+      if (s.projectId && s.jobRowId) {
+        const saved = await persistJobState(s.projectId, s.jobRowId, {
+          status: 'cancelled',
+          finished_at: new Date().toISOString(),
+          last_error: 'Cancelled by the user in Studio.',
+        });
+        if (!saved) {
+          toast('Stopped monitoring, but could not save cancellation status. Check your connection.');
+          return;
+        }
+      }
+      toast('Generation cancelled in Studio');
 
     } finally { setCancelBusy(false); }
 
@@ -1171,45 +1186,6 @@ const formatEditor = (command: string, value?: string) => {
   document.execCommand(command, false, value);
 };
 
-const downloadPiece = (p: Piece) => {
-  const text = [
-    p.title || '',
-    '',
-    p.bodyText.trim(),
-  ].join('\n');
-
-  const blob = new Blob([text], {
-    type: 'text/plain;charset=utf-8',
-  });
-
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-
-  const filename =
-    (p.title || 'sparrow-content')
-      .replace(/[<>:"/\\|?*]+/g, '-')
-      .trim()
-      .slice(0, 100) || 'sparrow-content';
-
-  link.href = url;
-  link.download = `${filename}.txt`;
-
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-
-  URL.revokeObjectURL(url);
-};
-
-
-  const localDate=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
-
-  const openSched=(id:string)=>{const c=s.schedule[id];setSchedId(id);setSchedDate(c?.date||localDate());setSchedTime(c?.time||'10:00');setViewId(null)};
-
-  const saveSched=(d:string,t:string)=>{if(!schedId)return;set({schedule:{...s.schedule,[schedId]:{date:d,time:t}}});setSchedId(null);toast('Scheduled')};
-
-  const removeSched=()=>{if(!schedId)return;const ns={...s.schedule};delete ns[schedId];set({schedule:ns});setSchedId(null);toast('Removed')};
-
   const company = s.profile?.company_name || '';
 
 
@@ -1392,26 +1368,6 @@ const downloadPiece = (p: Piece) => {
   </button>
 
   <button
-    className="btn btn-ghost btn-sm"
-    onClick={() => downloadPiece(p)}
-  >
-    Download
-  </button>
-
-  <button
-    className="btn btn-ghost btn-sm"
-    onClick={() => {
-      toast(
-        p.section === 'blogs'
-          ? 'WordPress import will be connected here.'
-          : `Import destination for ${p.channel} will be connected here.`
-      );
-    }}
-  >
-    Import
-  </button>
-
-  <button
     className="btn btn-primary btn-sm studio-schedule-button"
     onClick={() => openSched(p.id)}
   >
@@ -1438,7 +1394,7 @@ const downloadPiece = (p: Piece) => {
 
                 </div>
 
-                <div className="piece-body" dangerouslySetInnerHTML={{__html: sanitizeHtml(p.bodyHtml)}} />
+                <div className="piece-body" dangerouslySetInnerHTML={{__html: sanitizeHtml(cleanVisibleContent(p.bodyHtml))}} />
 
               </div>
 
@@ -2043,13 +1999,14 @@ const downloadPiece = (p: Piece) => {
 
 
 {schedId && piece(schedId) && (
-  <TimePicker
+  <ScheduleComposer
+    open={!!schedId}
+    projectId={s.projectId!}
     piece={piece(schedId)!}
-    initDate={schedDate}
-    initTime={schedTime}
-    hasExisting={!!s.schedule[schedId]}
-    onSave={saveSched}
-    onRemove={removeSched}
+    sourceJobId={s.jobRowId}
+    sourcePieceId={schedId}
+    brandTheme={s.brandTheme}
+    onSaved={() => toast('Post scheduled')}
     onClose={() => setSchedId(null)}
   />
 )}

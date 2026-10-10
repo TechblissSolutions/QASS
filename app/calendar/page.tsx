@@ -1,147 +1,50 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { getAccessToken } from '@/lib/auth';
 import { useToast } from '@/components/Toast';
-import { ymd, fmtTime, startOfMonth } from '@/lib/utils';
-import TimePicker from '@/components/TimePicker';
 import BrandTheme from '@/components/BrandTheme';
 import StoreLoading from '@/components/StoreLoading';
 import CompanyHeader from '@/components/CompanyHeader';
+import Modal from '@/components/Modal';
+import ScheduleComposer from '@/components/ScheduleComposer';
 
-export default function CalendarPage() {
-  const {s,set,piece,ready} = useStore();
-  const router = useRouter();
-  const toast = useToast();
-  const [month,setMonth] = useState(()=>startOfMonth(new Date()));
-  const [schedId,setSchedId] = useState<string|null>(null);
-  const [schedDate,setSchedDate] = useState('');
-  const [schedTime,setSchedTime] = useState('10:00');
-  const dragRef = useRef<string|null>(null);
+type Scheduled={id:string;title:string;caption_text:string;media_url?:string|null;media_type?:string|null;scheduled_at:string;timezone:string;status:string;source_piece_id?:string|null;source_job_id?:string|null;platforms:any[]};
+type Generated={jobId:string;pieceId:string;generatedAt:string;generationStatus:string;title:string;captionHtml:string;captionText:string;channel:string;format:string;mediaUrl?:string|null;mediaType?:string|null};
 
-  useEffect(()=>{
-    if(!ready) return;
-    void (async()=>{
-      const token=await getAccessToken();
-      if(!token){router.replace('/login?redirect='+encodeURIComponent(window.location.pathname+window.location.search));return;}
-      const projectId=new URLSearchParams(window.location.search).get('project');
-      if(projectId && projectId!==s.projectId) router.replace(`/studio?project=${encodeURIComponent(projectId)}`);
-    })();
-  },[ready,s.projectId,router]);
+const platforms=['All','LinkedIn','Instagram','Facebook','X','YouTube','WordPress'];
+function platformNames(post:Scheduled){return (post.platforms||[]).map((t:any)=>t.social_accounts?.account_name||t.account_name||t.provider).filter(Boolean).join(', ') || 'No account';}
+function platformKeys(post:Scheduled){return (post.platforms||[]).map((t:any)=>String(t.provider||'').toLowerCase());}
+function statusLabel(s:string){return s.charAt(0).toUpperCase()+s.slice(1);}
 
-  if(!ready) return <StoreLoading/>;
-  if(!s.projectId || !s.profile) return null;
+function CalendarPageContent(){
+ const {s,ready}=useStore(); const router=useRouter(); const params=useSearchParams(); const toast=useToast();
+ const [scheduled,setScheduled]=useState<Scheduled[]>([]); const [generated,setGenerated]=useState<Generated[]>([]); const [loading,setLoading]=useState(true); const [filter,setFilter]=useState('All'); const [status,setStatus]=useState('All'); const [query,setQuery]=useState(''); const [addOpen,setAddOpen]=useState(false); const [previousOpen,setPreviousOpen]=useState(false); const [composer,setComposer]=useState<{piece?:any;sourceJobId?:string;sourcePieceId?:string;existing?:Scheduled}|null>(null);
 
-  const today=ymd(new Date());
-  const offset=(new Date(month).getDay()+6)%7;
-  const start=new Date(month.getFullYear(),month.getMonth(),1-offset);
-  const byDay:Record<string,{id:string;date:string;time:string;channel:string}[]>={};
+ useEffect(()=>{if(!ready)return; if(!s.projectId){router.replace('/dashboard');return;} void load();},[ready,s.projectId]);
+ useEffect(()=>{const ok=params.get('social_connected'); const err=params.get('social_error'); if(ok)toast(`${ok} connected`); if(err)toast(err); if(ok||err)router.replace(`/calendar?project=${encodeURIComponent(s.projectId||'')}`);},[params,s.projectId]);
+ async function load(){setLoading(true);try{const token=await getAccessToken();if(!token)return;const r=await fetch(`/api/scheduling/posts?project=${encodeURIComponent(s.projectId!)}`,{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.error||'Unable to load schedule');setScheduled(d.scheduled||[]);setGenerated(d.generated||[]);}catch(e){toast(e instanceof Error?e.message:'Unable to load schedule');}finally{setLoading(false);}}
+ async function cancel(id:string){if(!window.confirm('Cancel this scheduled post?'))return;const token=await getAccessToken();const r=await fetch(`/api/scheduling/posts?id=${encodeURIComponent(id)}`,{method:'DELETE',headers:token?{Authorization:`Bearer ${token}`}:{}});if(r.ok){toast('Scheduled post cancelled');void load();}else toast('Could not cancel post');}
+ const filtered=useMemo(()=>scheduled.filter(p=>{
+   const q=query.toLowerCase().trim(); const matchQ=!q||`${p.title} ${p.caption_text} ${platformNames(p)}`.toLowerCase().includes(q); const matchPlatform=filter==='All'||platformKeys(p).includes(filter.toLowerCase()); const matchStatus=status==='All'||p.status===status.toLowerCase(); return matchQ&&matchPlatform&&matchStatus;
+ }),[scheduled,query,filter,status]);
+ if(!ready)return <StoreLoading/>; if(!s.projectId)return null;
+ return <div className="company-workspace"><CompanyHeader/><BrandTheme/><div className="page-container schedule-page">
+   <div className="schedule-page-head"><div><span className="calendar-kicker">SOCIAL PLANNER</span><h1>Schedule</h1><p>Plan, edit and publish your content across connected social accounts.</p></div><button className="btn btn-primary schedule-add-btn" onClick={()=>setAddOpen(true)}>＋ Add New Post</button></div>
+   <section className="planner-shell">
+     <div className="planner-toolbar"><div className="planner-view-tabs"><button className={status==='All'?'active':''} onClick={()=>setStatus('All')}>All <span>{scheduled.length}</span></button><button className={status==='scheduled'?'active':''} onClick={()=>setStatus('scheduled')}>Scheduled <span>{scheduled.filter(x=>x.status==='scheduled').length}</span></button><button className={status==='published'?'active':''} onClick={()=>setStatus('published')}>Published <span>{scheduled.filter(x=>x.status==='published').length}</span></button><button className={status==='failed'?'active':''} onClick={()=>setStatus('failed')}>Failed <span>{scheduled.filter(x=>x.status==='failed').length}</span></button></div></div>
+     <div className="planner-filters"><select value={filter} onChange={e=>setFilter(e.target.value)}>{platforms.map(x=><option key={x}>{x}</option>)}</select><select value={status} onChange={e=>setStatus(e.target.value)}><option>All</option><option value="scheduled">Scheduled</option><option value="published">Published</option><option value="failed">Failed</option><option value="cancelled">Cancelled</option></select><input className="input" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by caption, platform or title"/><button className="btn btn-ghost" onClick={()=>void load()}>↻ Refresh</button></div>
+     <div className="planner-table-wrap">{loading?<div className="planner-empty">Loading your social planner…</div>:filtered.length===0?<div className="planner-empty"><strong>No scheduled posts yet</strong><span>Click Add New Post to schedule a previous generation, create a custom post, or generate new content in Studio.</span></div>:<table className="planner-table"><thead><tr><th>Post</th><th>Media</th><th>Status</th><th>Date & time</th><th>Social</th><th>Actions</th></tr></thead><tbody>{filtered.map(p=>{const d=new Date(p.scheduled_at);return <tr key={p.id}><td><div className="planner-post-cell"><strong>{p.title||'Untitled post'}</strong><span>{p.caption_text?.slice(0,105)}{p.caption_text?.length>105?'…':''}</span></div></td><td>{p.media_url?<img className="planner-media-thumb" src={p.media_url} alt=""/>:<span className="planner-no-media">Text</span>}</td><td><span className={`planner-status ${p.status}`}>{statusLabel(p.status)}</span></td><td><strong>{d.toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'})}</strong><small>{d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})} · {p.timezone}</small></td><td><div className="planner-socials">{(p.platforms||[]).map((t:any)=><span key={t.id} title={t.social_accounts?.account_name||t.account_name||t.provider}>{String(t.provider||'?').slice(0,2).toUpperCase()}</span>)}</div><small>{platformNames(p)}</small></td><td><div className="planner-actions"><button className="btn btn-ghost btn-sm" onClick={()=>setComposer({existing:p})}>Edit</button>{p.status==='scheduled'&&<button className="btn btn-danger btn-sm" onClick={()=>void cancel(p.id)}>Cancel</button>}</div></td></tr>})}</tbody></table>}</div>
+   </section>
+   <div className="planner-footnote">Scheduled posts publish automatically through your connected social accounts. If an account expires or a platform rejects a post, the post is marked failed so you can fix it and reschedule.</div>
+ </div>
+ {addOpen&&<Modal open onClose={()=>setAddOpen(false)} small><div className="add-post-modal"><span className="schedule-modal-kicker">NEW SOCIAL POST</span><h2>What do you want to schedule?</h2><div className="add-post-options"><button onClick={()=>{setAddOpen(false);setPreviousOpen(true)}}><span>↻</span><strong>Use a previous generation</strong><small>Pick any content Sparrow generated before.</small></button><button onClick={()=>router.push(`/studio?project=${encodeURIComponent(s.projectId!)}`)}><span>✦</span><strong>Generate in Studio</strong><small>Create fresh content, then schedule it from Studio.</small></button><button onClick={()=>{setAddOpen(false);setComposer({})}}><span>＋</span><strong>Create a custom post</strong><small>Start with a blank editor and write it yourself.</small></button></div></div></Modal>}
+ {previousOpen&&<Modal open onClose={()=>setPreviousOpen(false)}><div className="previous-posts-modal"><div className="m-head"><div><span className="schedule-modal-kicker">PREVIOUS GENERATIONS</span><h2>Choose a post to schedule</h2></div><button className="btn btn-ghost btn-icon" onClick={()=>setPreviousOpen(false)}>×</button></div><div className="previous-post-list">{generated.length===0?<div className="planner-empty">No previous generations found.</div>:generated.slice(0,100).map(g=><button key={`${g.jobId}:${g.pieceId}`} className="previous-post-item" onClick={()=>{setPreviousOpen(false);setComposer({piece:{id:g.pieceId,section:'social',channel:g.channel,format:g.format,title:g.title,bodyHtml:g.captionHtml,bodyText:g.captionText,wordCount:g.captionText.split(/\s+/).filter(Boolean).length,mediaUrl:g.mediaUrl||undefined,mediaType:g.mediaType as any},sourceJobId:g.jobId,sourcePieceId:g.pieceId})}}><div>{g.mediaUrl?<img src={g.mediaUrl} alt=""/>:<div className="previous-no-media">Aa</div>}</div><span><strong>{g.title}</strong><small>{g.channel} · {new Date(g.generatedAt).toLocaleDateString()}</small><em>{g.captionText.slice(0,130)}{g.captionText.length>130?'…':''}</em></span><b>Schedule →</b></button>)}</div></div></Modal>}
+ {composer&&<ScheduleComposer open projectId={s.projectId!} piece={composer.piece||null} sourceJobId={composer.sourceJobId||null} sourcePieceId={composer.sourcePieceId||null} existing={composer.existing||null} brandTheme={s.brandTheme} onSaved={()=>{toast(composer.existing?'Schedule updated':'Post scheduled');void load();}} onClose={()=>setComposer(null)}/>} 
+ </div>;
+}
 
-  Object.entries(s.schedule).forEach(([id,w])=>{
-    if (id === '__selectedPlatforms' || !w || typeof w !== 'object' || !('date' in w)) return;
-    const p=piece(id);
-    if(!p) return;
-    (byDay[w.date] ||= []).push({id,date:w.date,time:w.time,channel:p.channel});
-  });
-  Object.values(byDay).forEach(list=>list.sort((a,b)=>a.time.localeCompare(b.time)));
-
-  const openSchedule=(id:string,date?:string)=>{
-    const w=s.schedule[id];
-    if(!w) return;
-    setSchedId(id);
-    setSchedDate(date || w.date);
-    setSchedTime(w.time || '10:00');
-  };
-
-  const saveSchedule=(date:string,time:string)=>{
-    if(!schedId) return;
-    const next={...s.schedule,[schedId]:{date,time}};
-    set({schedule:next});
-    setSchedId(null);
-    toast('Post moved');
-  };
-
-  const removeSchedule=()=>{
-    if(!schedId) return;
-    const next={...s.schedule};
-    delete next[schedId];
-    set({schedule:next});
-    setSchedId(null);
-    toast('Scheduled post cancelled');
-  };
-
-  const dayDrop=(date:string)=>{
-    const id=dragRef.current;
-    dragRef.current=null;
-    if(!id || date<today) return;
-    const current=s.schedule[id];
-    set({schedule:{...s.schedule,[id]:{date,time:current?.time||'10:00'}}});
-    toast('Post moved');
-  };
-
-  const days=Array.from({length:42},(_,i)=>{
-    const d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i);
-    const key=ymd(d);
-    return {d,key,out:d.getMonth()!==month.getMonth(),today:key===today,past:key<today};
-  });
-
-  return <div className="company-workspace">
-    <CompanyHeader/><BrandTheme/>
-    <div className="page-container calendar-only-page">
-      <div className="page-head">
-        <div><span className="calendar-kicker">CONTENT CALENDAR</span><h1>Calendar</h1><p>Move a scheduled post to another date or cancel it.</p></div>
-        <button className="btn btn-ghost btn-sm" onClick={()=>router.push(`/studio?project=${encodeURIComponent(s.projectId||'')}`)}>Back to Studio</button>
-      </div>
-
-      <section className="calendar-shell">
-        <div className="calendar-toolbar">
-          <div className="calendar-month-nav">
-            <button className="btn btn-ghost btn-icon" onClick={()=>setMonth(new Date(month.getFullYear(),month.getMonth()-1,1))} aria-label="Previous month">‹</button>
-            <h2>{month.toLocaleDateString(undefined,{month:'long',year:'numeric'})}</h2>
-            <button className="btn btn-ghost btn-icon" onClick={()=>setMonth(new Date(month.getFullYear(),month.getMonth()+1,1))} aria-label="Next month">›</button>
-            <button className="btn btn-ghost btn-sm" onClick={()=>setMonth(startOfMonth(new Date()))}>Today</button>
-          </div>
-          <div className="calendar-toolbar-note">{Object.keys(s.schedule).filter(key => key !== '__selectedPlatforms').length} scheduled</div>
-        </div>
-
-        <div className="calendar-month">
-          {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=><div key={d} className="calendar-dow">{d}</div>)}
-          {days.map(({d,key,out,today:isToday,past})=>{
-            const events=byDay[key]||[];
-            return <div key={key}
-              className={'calendar-day'+(out?' is-out':'')+(isToday?' is-today':'')+(past?' is-past':'')}
-              onDragOver={e=>{if(!past)e.preventDefault()}}
-              onDrop={()=>dayDrop(key)}
-            >
-              <span className="calendar-day-number">{d.getDate()}</span>
-              <div className="calendar-events">
-                {events.slice(0,4).map(ev=><button key={ev.id} className="calendar-event"
-                  draggable
-                  onDragStart={()=>{dragRef.current=ev.id}}
-                  onClick={()=>openSchedule(ev.id)}
-                  title="Move or cancel this post"
-                >
-                  <span className="calendar-event-dot" />
-                  <span>{ev.channel}</span>
-                  <time>{fmtTime(ev.time)}</time>
-                </button>)}
-                {events.length>4&&<span className="calendar-more">+{events.length-4} more</span>}
-              </div>
-            </div>;
-          })}
-        </div>
-      </section>
-
-      {schedId&&piece(schedId)&&<TimePicker
-        piece={piece(schedId)!}
-        initDate={schedDate}
-        initTime={schedTime}
-        hasExisting
-        onSave={saveSchedule}
-        onRemove={removeSchedule}
-        onClose={()=>setSchedId(null)}
-      />}
-    </div>
-  </div>;
+export default function CalendarPage(){
+ return <Suspense fallback={<StoreLoading />}><CalendarPageContent /></Suspense>;
 }

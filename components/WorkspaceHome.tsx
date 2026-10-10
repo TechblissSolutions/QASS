@@ -387,18 +387,18 @@ export default function WorkspaceHome() {
 
                 const primary =
                   String(
-                    theme.primary_color || '#111111'
+                    theme.primary_color || '#f97316'
                   ).trim();
 
                 const background =
                   String(
                     theme.background_color ||
-                      '#f4f4f0'
+                      '#ffffff'
                   ).trim();
 
                 const textColor =
                   String(
-                    theme.text_color || '#111111'
+                    theme.text_color || '#111827'
                   ).trim();
 
                 /*

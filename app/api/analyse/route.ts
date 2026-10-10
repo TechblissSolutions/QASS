@@ -44,8 +44,11 @@ export async function POST(req: NextRequest) {
   const bot = botGuard(req); if (bot) return bot;
   try {
     assertServerEnv();
-    const data = await readJsonBody(req, 16 * 1024) as { url?: unknown };
+    const data = await readJsonBody(req, 16 * 1024) as { url?: unknown; socialHandles?: unknown };
     const url = await assertPublicHttpUrl(validateUrl(data?.url));
+    const socialHandles = (data?.socialHandles && typeof data.socialHandles === 'object' && !Array.isArray(data.socialHandles))
+      ? Object.fromEntries(Object.entries(data.socialHandles as Record<string, unknown>).filter(([key, value]) => ['instagram','facebook','linkedin','x','youtube','wordpress'].includes(key) && typeof value === 'string' && value.trim()).map(([key, value]) => [key, String(value).trim().slice(0, 500)]))
+      : {};
     const accessToken = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim() || undefined;
     if (!accessToken) return NextResponse.json({ error: 'Sign in to analyse a company website.', code: 'AUTH_REQUIRED' }, { status: 401, headers: { 'X-Request-ID': rid } });
     let entitlement: Awaited<ReturnType<typeof getEntitlementsForToken>> | null = null;
@@ -88,7 +91,8 @@ export async function POST(req: NextRequest) {
     let projectId: string | null = existingProjectId;
     if (accessToken && entitlement?.user && !projectId) {
       try {
-        const project = await createProjectWithLimit(url, analyzedProfile, null, null, entitlement.user.id, entitlement.maxCompanies);
+        const savedProfile = analyzedProfile ? { ...analyzedProfile, ...(Object.keys(socialHandles).length ? { social_handles: socialHandles } : {}) } : analyzedProfile;
+        const project = await createProjectWithLimit(url, savedProfile, null, null, entitlement.user.id, entitlement.maxCompanies);
         projectId = project?.id || null;
       } catch (dbError) {
         const message = errorMessage(dbError, 'Unable to save this company.');
@@ -97,7 +101,7 @@ export async function POST(req: NextRequest) {
         throw new Error('Unable to save this company right now. Please retry.');
       }
     } else if (accessToken && projectId && analyzedProfile) {
-      await updateProject(projectId, { profile: analyzedProfile }, accessToken);
+      await updateProject(projectId, { profile: { ...(analyzedProfile || {}), ...(Object.keys(socialHandles).length ? { social_handles: socialHandles } : {}) } }, accessToken);
     }
 
     return NextResponse.json({ html, projectId }, { headers: { 'Cache-Control': 'private, no-store', 'X-Cache': cacheHit ? 'HIT' : 'MISS', 'X-Request-ID': rid } });
