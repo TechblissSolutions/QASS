@@ -1,6 +1,6 @@
-# Sparrow Content Generation Agent
+# Sparrow by TechBliss
 
-Sparrow is a production-oriented Next.js content-generation application backed by n8n, Supabase, Upstash Redis, Sentry and Vercel.
+Sparrow by TechBliss is a production-oriented Next.js content-generation application backed by n8n, Supabase, Upstash Redis, Sentry and Vercel.
 
 ## Architecture
 
@@ -42,8 +42,11 @@ N8N_BASE=https://your-n8n-host.example.com
 N8N_ANALYSE_PATH=/form/your-analysis-form-id
 N8N_GENERATE_PATH=/webhook/your-generation-webhook
 N8N_LIVE_VIEW_PATH=/webhook/your-live-view-webhook
-# Optional; reserved for future media-provider routes
-N8N_MEDIA_PATH=/webhook/your-media-webhook
+# Server-side generation webhook paths
+N8N_MEDIA_PATH=/webhook/generate-higgsfield-media
+N8N_MEDIA_TIMEOUT_MS=600000
+N8N_CONTENT_TOOLS_PATH=/webhook/techbliss-content-tools
+N8N_CONTENT_TOOLS_TIMEOUT_MS=120000
 N8N_CA_CERT=
 
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
@@ -191,3 +194,48 @@ Run `supabase_entitlements_backfill.sql` once after the main schema/migration. I
 - Accepts the native file-backed HTML returned by the current n8n workflow and only marks a section ready when real content cards are parsed.
 - Keeps the existing 4s/8s/12s/20s backoff, visibility pause, Supabase persistence, cancellation behavior, and 20-minute safety limit.
 - No n8n workflow/backend changes are included.
+
+## Local environment
+
+Do not commit `.env.local` or paste its secrets into source control. For the Fixed5/Fixed6 workspace, copy the existing Sparrow local environment file into the **actual extracted project folder** before running the app:
+
+```powershell
+Copy-Item "C:\Users\tanis\Downloads\qass\.env.local" "C:\Users\tanis\OneDrive\Desktop\Sparrow_Scheduling_Phase1-4_Brand_Ready_EditRef_Fixed6\.env.local"
+```
+
+Verify it with:
+
+```powershell
+Test-Path ".env.local"
+```
+
+It must return `True` while PowerShell is inside the Fixed6 folder.
+
+## Scheduling schema
+
+The scheduler uses the existing `scheduled_posts.platforms` JSON column and the related `social_accounts` table. It does **not** require a `scheduled_post_targets` table.
+
+## Scheduling media storage
+
+Run `supabase_scheduling_storage.sql` once in the existing Supabase project to create the `scheduled-media` Storage bucket. The server upload endpoint also checks for the bucket and creates it automatically when `SUPABASE_SERVICE_ROLE_KEY` is available.
+
+## Social OAuth
+
+See `SOCIAL_OAUTH_SETUP.md`. The six platform cards are intentionally independent. A platform without developer credentials is shown as requiring OAuth setup rather than producing a runtime connection error.
+
+Latest test-build updates: quantity controls are locked in Sparrow AI mode and editable in personal API mode; the shared social media post count is 1–5 across connected platforms; blog generation remains one per request; ad/message outputs are consolidated into a copy-only card. See `API_SETTINGS_IMPLEMENTATION.md` for current limitations and validation status.
+
+## Admin, account security, and transactional email
+
+See `ADMIN_DASHBOARD_SETUP.md` for the admin route map, per-user Free/Premium controls, feature overrides, SQL setup, Supabase email OTP configuration, ZeptoMail setup, first-seen-device alerts, scheduling emails, and the n8n credential provisioning boundary. Do not deploy before running the updated SQL in a staging Supabase project and verifying the build and end-to-end auth flows.
+
+## Optional company-named n8n API credential provisioning
+See `ADMIN_DASHBOARD_SETUP.md` → **Company-named n8n API credentials**. This integration is disabled unless the server has `N8N_API_BASE_URL`, `N8N_API_KEY`, and explicit `N8N_CREDENTIAL_TYPE_MAP` entries. Provider-specific credential types and field names must be verified in your n8n instance. Credential creation does not modify existing workflows or automatically attach credentials to workflow nodes.
+
+## Email notifications
+Configure `ZEPTOMAIL_API_TOKEN`, `ZEPTOMAIL_FROM_EMAIL`, `ZEPTOMAIL_FROM_NAME`, and `ZEPTOMAIL_BOUNCE_ADDRESS` on the server. Configure Supabase Auth SMTP separately to use ZeptoMail for signup OTPs. QASS emails users for scheduling changes and generation terminal statuses when the job persistence endpoint receives those state transitions. Signup OTP uses Supabase Auth email confirmation. See the setup guide for event coverage and remaining OAuth/publishing callback hooks.
+
+## Create tools (Image, Video, Email)
+Image and video generation use the authenticated `/api/media` route and the n8n `generate-higgsfield-media` webhook. Email actions use `/api/content-tools` and the n8n `techbliss-content-tools` webhook. Configure `N8N_CONTENT_TOOLS_PATH` in the server environment; do not use a `NEXT_PUBLIC_` prefix. Source URLs are checked server-side and must be public HTTPS URLs. Carousel and variation requests are submitted as indexed calls (maximum six per batch).
+
+The n8n email swipe action currently reports `persistence: not_configured`; the UI stores saved swipe emails in browser local storage only. They are not synced to Supabase or other devices. The media workflow polls provider status internally and returns media once complete; it does not expose intermediate percentage progress.

@@ -2,7 +2,9 @@ export const runtime = 'nodejs';
 
 export const maxDuration = 300;
 
+
 import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 import * as Sentry from '@sentry/nextjs';
 
@@ -29,9 +31,12 @@ import {
   createJob,
   getProject,
   updateJob,
+  getSupabaseClient,
 } from '@/lib/supabase';
 
 import { getEntitlementsForToken } from '@/lib/entitlements';
+import { generateWithPersonalAI } from '@/lib/personal-ai';
+import { checkFeatureGate } from '@/lib/admin-auth';
 
 export async function POST(req: NextRequest) {
   const requestId = crypto.randomUUID();
@@ -65,6 +70,9 @@ export async function POST(req: NextRequest) {
       'project_id',
       80
     );
+
+    const featureBlock = await checkFeatureGate(req, 'generation');
+    if (featureBlock) return featureBlock;
 
     /*
      * Authentication remains mandatory before any protected
@@ -289,6 +297,84 @@ export async function POST(req: NextRequest) {
               );
             }
 
+            // Resolve AI mode and settings for THIS authenticated company.
+            // Personal mode generates with the company's encrypted provider key on the server.
+            // Platform mode uses the configured platform workflow through n8n.
+            const settingsClient = getSupabaseClient(accessToken);
+            if (!settingsClient) throw new Error('Supabase is not configured.');
+
+            const { data: modeRow, error: modeError } = await settingsClient
+              .from('project_ai_settings')
+              .select('api_mode, settings')
+              .eq('project_id', projectId)
+              .maybeSingle();
+
+            if (modeError) {
+              throw new Error('Unable to verify this company’s AI settings. Generation was stopped.');
+            }
+
+            const storedSettings = modeRow?.settings && typeof modeRow.settings === 'object'
+              ? (modeRow.settings as Record<string, any>)
+              : {};
+            const { data: modePolicy, error: modePolicyError } = await getSupabaseAdmin()
+              .from('admin_project_api_policies').select('api_mode_override').eq('project_id', projectId).maybeSingle();
+            if (modePolicyError) throw new Error('Unable to verify administrator API-mode policy. Generation was stopped. Run the admin dashboard migration.');
+            const savedMode = String(modePolicy?.api_mode_override ?? modeRow?.api_mode ?? storedSettings.apiMode ?? 'platform').toLowerCase();
+            const aiMode = savedMode === 'managed' ? 'platform' : savedMode;
+
+            if (aiMode !== 'platform' && aiMode !== 'personal') {
+              throw new Error('Unsupported company AI mode. Open Profile → AI, API & content settings and select a mode.');
+            }
+
+            if (aiMode === 'personal') {
+              const personalResult = await generateWithPersonalAI({
+                settings: storedSettings,
+                input: {
+                  company_name: data.company_name,
+                  company_website: data.company_website,
+                  company_summary: data.company_summary,
+                  company_details: data.company_details,
+                  target_audience: data.target_audience,
+                  company_research: data.company_research,
+                  product: data.product,
+                  goal: data.goal,
+                  tone: data.tone,
+                  style: data.style,
+                  extra: data.extra,
+                  platforms: data.platforms,
+                  regenerate: data.regenerate,
+                  previous_content: data.previous_content,
+                },
+              });
+
+              const personalJobId = `job-${Date.now()}-${crypto.randomUUID().replace(/-/g, '').slice(0, 8)}`;
+              if (jobRowId) {
+                await updateJob(jobRowId, {
+                  job_id: personalJobId,
+                  status: 'completed',
+                  finished_at: new Date().toISOString(),
+                  request_id: requestId,
+                  last_error: null,
+                }, accessToken);
+              }
+
+              return {
+                html: personalResult.html,
+                brandTheme: data.brand_theme || {
+                  primary_color: '#2563eb', secondary_color: '#10b981',
+                  background_color: '#f8fafc', text_color: '#1f2937',
+                  logo_url: '', font_family: 'Inter, Arial, sans-serif',
+                },
+                job_id: personalJobId,
+                jobRowId,
+                request_id: requestId,
+                live_view_token: null,
+                direct_provider: true,
+                ai_mode: 'personal',
+                item_count: personalResult.itemCount,
+              };
+            }
+
             const params = new URLSearchParams();
 
 /*
@@ -304,6 +390,7 @@ export async function POST(req: NextRequest) {
  */
 params.append('project_id', projectId);
 params.append('client_session_id', projectId);
+params.append('ai_mode', aiMode);
 
 const regenerationExtra = data.regenerate
   ? [
@@ -368,13 +455,30 @@ ${data.previous_content}`,
               data.style
             );
 
-            /*
-             * The n8n workflow is intentionally responsible
-             * for its fixed output quantity.
-             *
-             * Do not send a content-count parameter or ask
-             * n8n to generate a specific number.
-             */
+            // Keep frontend content defaults aligned with the n8n workflow JSON.
+            // The n8n Prepare Company Details node must parse this JSON string from body.content_config.
+            const contentSettings = storedSettings.content && typeof storedSettings.content === 'object'
+              ? storedSettings.content as Record<string, unknown>
+              : {};
+            const asCount = (key: string, fallback: number) => {
+              const value = Number(contentSettings[key] ?? fallback);
+              return Number.isFinite(value) ? Math.max(0, Math.round(value)) : fallback;
+            };
+            const contentConfig = {
+              social_post_count: asCount('socialMediaPosts', 5),
+              google_ad_count: asCount('googleAdCopies', 3),
+              meta_ad_count: asCount('metaAdCopies', 3),
+              email_count: asCount('emailMessages', 3),
+              whatsapp_count: asCount('whatsappMessages', 2),
+              sms_count: asCount('smsMessages', 1),
+              followup_count: asCount('leadFollowupMessages', 3),
+              blog_word_count: asCount('blogWordCount', 1100),
+              blog_uniqueness_threshold: asCount('blogUniquenessThreshold', 65),
+              blog_image_count: asCount('blogImageCount', 1),
+            };
+            params.append('content_config', JSON.stringify(contentConfig));
+            // Flat compatibility fields help n8n workflows that read form fields directly.
+            for (const [key, value] of Object.entries(contentConfig)) params.append(key, String(value));
 
             params.append(
               'additional_instructions',
@@ -435,16 +539,13 @@ ${data.previous_content}`,
  * This is intentionally limited so we do not dump an
  * unbounded response into Vercel logs.
  */
-console.log(
-  '[SPARROW N8N RAW RESPONSE]',
-  {
-    status: res.status,
-    contentType:
-      res.headers.get('content-type') || '',
-    length: rawBody.length,
-    preview: rawBody.slice(0, 10000),
-  }
-);
+// Do not log generated content, API credentials, or raw webhook responses.
+console.info('[QASS n8n response]', {
+  requestId,
+  status: res.status,
+  contentType: res.headers.get('content-type') || '',
+  responseLength: rawBody.length,
+});
 
 if (
   !res.ok ||

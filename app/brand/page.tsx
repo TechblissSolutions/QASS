@@ -274,7 +274,7 @@ export default function BrandPage() {
             <h1>Brand Data</h1>
 
             <p>
-              Review the company information Sparrow uses
+              Review the company information Sparrow by TechBliss uses
               when creating content.
             </p>
           </div>

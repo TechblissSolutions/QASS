@@ -14,7 +14,7 @@ export default function TimePicker({
   const [time,setTime]=useState(initTime);
   useEffect(()=>{setDate(initDate);setTime(initTime)},[initDate,initTime]);
 
-  return <Modal open onClose={onClose} small>
+  return <Modal open onClose={onClose} label={hasExisting ? 'Edit schedule' : 'Schedule post'} small>
     <div className="schedule-modal">
       <div className="schedule-modal-head">
         <div>

@@ -25,24 +25,48 @@ function displayName(account: Account | null) {
   return email ? email.split('@')[0] : 'Account';
 }
 
-export default function AccountMenu({ compact = false }: { compact?: boolean }) {
+export default function AccountMenu({
+  compact = false,
+  onAuthChange,
+  initialAccount,
+}: {
+  compact?: boolean;
+  onAuthChange?: (signedIn: boolean | null) => void;
+  initialAccount?: Account | null;
+}) {
   const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [account, setAccount] = useState<Account | null>(null);
+  const [account, setAccount] = useState<Account | null>(initialAccount || null);
 
   useEffect(() => {
     let alive = true;
+    if (initialAccount) {
+      setAccount(initialAccount);
+      onAuthChange?.(Boolean(initialAccount.user?.email));
+      return () => { alive = false; };
+    }
     (async () => {
       const token = await getAccessToken();
-      if (!token) return;
+      if (!token) {
+        if (alive) onAuthChange?.(false);
+        return;
+      }
       const res = await fetch('/api/account', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
-      if (!res.ok) return;
+      if (!res.ok) {
+        if (alive) onAuthChange?.(null);
+        return;
+      }
       const data = await res.json() as Account;
-      if (alive) setAccount(data);
-    })().catch(() => {});
+      if (alive) {
+        setAccount(data);
+        onAuthChange?.(Boolean(data.user?.email));
+      }
+    })().catch(() => {
+      if (alive) onAuthChange?.(null);
+    });
     return () => { alive = false; };
-  }, []);
+  }, [initialAccount, onAuthChange]);
 
   useEffect(() => {
     if (!open) return;
@@ -82,7 +106,10 @@ export default function AccountMenu({ compact = false }: { compact?: boolean }) 
       <div className="account-plan-row"><span>Account</span><strong className={`account-plan account-plan-${plan}`}>{plan === 'owner' ? 'OWNER' : plan === 'pro' ? 'PRO' : 'FREE'}</strong></div>
       <div className="account-meta-row"><span>Company workspaces</span><strong>{account?.entitlements.maxCompanies == null ? 'Unlimited' : account.entitlements.maxCompanies}</strong></div>
       <div className="account-popover-actions">
-        <a href="/dashboard" onClick={() => setOpen(false)}>Workspace</a>
+        {plan === 'owner' && <a href="/admin" onClick={() => setOpen(false)}>Admin console ↗</a>}
+        <a href="/profile" onClick={() => setOpen(false)}>Profile</a>
+        <a href="/dashboard" onClick={() => setOpen(false)}>All companies</a>
+        <a href="/analyse?new=1" onClick={() => setOpen(false)}>＋ Add company</a>
         <a href="/pricing" onClick={() => setOpen(false)}>Plans & billing</a>
         <button type="button" onClick={signOut}>Sign out <span>↗</span></button>
       </div>

@@ -1,5 +1,6 @@
 'use client';
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { Suspense, createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type { AppState, Piece } from './types';
 import { SEC_META, GIVE_UP_MS } from './constants';
 import { fetchBrandAppearance, brandThemeComplete, mergeTheme } from './brand-client';
@@ -31,6 +32,45 @@ interface Ctx {
   ready: boolean;
 }
 const Store = createContext<Ctx | null>(null);
+
+function ProjectRouteHydrator({
+  loadProject,
+  loadProjectJob,
+  reset,
+  setReady,
+}: {
+  loadProject: Ctx['loadProject'];
+  loadProjectJob: Ctx['loadProjectJob'];
+  reset: Ctx['reset'];
+  setReady: (ready: boolean) => void;
+}) {
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get('project');
+  const jobId = searchParams.get('job');
+
+  useEffect(() => {
+    let cancelled = false;
+    const hydrate = async () => {
+      if (!projectId) {
+        reset();
+        setReady(true);
+        return;
+      }
+
+      setReady(false);
+      const destination = jobId
+        ? await loadProjectJob(projectId, jobId)
+        : await loadProject(projectId);
+      if (cancelled) return;
+      if (!destination) reset();
+      setReady(true);
+    };
+    void hydrate();
+    return () => { cancelled = true; };
+  }, [projectId, jobId, loadProject, loadProjectJob, reset, setReady]);
+
+  return null;
+}
 
 async function hydrateBrandTheme(project: ProjectRow): Promise<Record<string, unknown> | null> {
   const current = (project.brand_theme || {}) as Record<string, unknown>;
@@ -73,11 +113,16 @@ function mergeProject(base: AppState, project: ProjectRow, job?: JobRow | null):
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [s, _set] = useState<AppState>(DEFAULTS);
   const [ready, setReady] = useState(false);
+  const projectLoadSequence = useRef(0);
 
   const set = useCallback((patch: Partial<AppState>) => _set(prev => ({ ...prev, ...patch })), []);
-  const reset = useCallback(() => _set(DEFAULTS), []);
+  const reset = useCallback(() => {
+    projectLoadSequence.current += 1;
+    _set(DEFAULTS);
+  }, []);
 
   const loadProjectJob = useCallback(async (projectId: string, jobId: string) => {
+    const requestId = ++projectLoadSequence.current;
     const supabase = getSupabaseClient();
     if (!supabase) return false;
     try {
@@ -86,7 +131,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const theme = await hydrateBrandTheme(project);
       if (theme) project.brand_theme = theme;
       const job = await getJob(jobId);
-      if (!job || job.project_id !== projectId) return false;
+      if (requestId !== projectLoadSequence.current || !job || job.project_id !== projectId) return false;
       _set(prev => {
         const merged = mergeProject(prev, project, job);
         const localIsSameGeneration = prev.projectId === projectId && Boolean(prev.jobId) && prev.jobId === job.job_id;
@@ -102,41 +147,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadProject = useCallback(async (projectId: string) => {
+    const requestId = ++projectLoadSequence.current;
     const supabase = getSupabaseClient();
     if (!supabase) return false;
     try {
       const project = await getProject(projectId);
       if (!project) return false;
       const [theme, job] = await Promise.all([hydrateBrandTheme(project), getLatestJob(project.id)]);
+      if (requestId !== projectLoadSequence.current) return false;
       if (theme) project.brand_theme = theme;
       _set(prev => mergeProject(prev, project, job));
       const stale = Boolean(job && ['starting','running'].includes(job.status) && Date.now() - new Date(job.started_at).getTime() > GIVE_UP_MS);
       return job?.job_id && !stale ? 'studio' : theme || project.brand_theme ? 'studio' : 'brand';
     } catch { return false; }
   }, []);
-
-  // The URL is the durable workspace identity. On a refresh, reconstruct the active
-  // company (and optionally a specific generation) from Supabase before pages render.
-  useEffect(() => {
-    let cancelled = false;
-    const hydrate = async () => {
-      if (typeof window === 'undefined') return;
-      const params = new URLSearchParams(window.location.search);
-      const projectId = params.get('project');
-      const jobId = params.get('job');
-      if (!projectId) { if (!cancelled) setReady(true); return; }
-      const destination = jobId
-        ? await loadProjectJob(projectId, jobId)
-        : await loadProject(projectId);
-      if (cancelled) return;
-      if (!destination) {
-        _set(DEFAULTS);
-      }
-      setReady(true);
-    };
-    void hydrate();
-    return () => { cancelled = true; };
-  }, [loadProject, loadProjectJob]);
 
   useEffect(() => {
     if (!ready || !s.projectId) return;
@@ -167,6 +191,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [s.sections]);
   const piece = useCallback((id: string) => pieces().find(p => p.id === id), [pieces]);
 
-  return <Store.Provider value={{ s, set, reset, loadProject, loadProjectJob, pieces, piece, ready }}>{children}</Store.Provider>;
+  return <Store.Provider value={{ s, set, reset, loadProject, loadProjectJob, pieces, piece, ready }}>
+    <Suspense fallback={null}>
+      <ProjectRouteHydrator
+        loadProject={loadProject}
+        loadProjectJob={loadProjectJob}
+        reset={reset}
+        setReady={setReady}
+      />
+    </Suspense>
+    {children}
+  </Store.Provider>;
 }
 export function useStore() { const ctx = useContext(Store); if (!ctx) throw new Error('useStore must be inside StoreProvider'); return ctx; }

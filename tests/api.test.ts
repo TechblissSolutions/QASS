@@ -38,12 +38,37 @@ jest.mock('@/lib/supabase', () => ({
       : null
   ),
 
-  getSupabaseClient: jest.fn(() => null),
+  getSupabaseClient: jest.fn(() => ({
+    from: jest.fn((table: string) => ({
+      select: jest.fn(() => ({
+        eq: jest.fn(() => ({
+          maybeSingle: jest.fn(async () => ({
+            data: table === 'project_ai_settings'
+              ? { api_mode: 'platform', settings: {} }
+              : { api_mode_override: null },
+            error: null,
+          })),
+        })),
+      })),
+    })),
+  })),
 
   getJobByExternalId: jest.fn(async () => null),
 }));
 
 jest.mock('@/lib/supabase-admin', () => ({
+  getSupabaseAdmin: jest.fn(() => ({
+    from: jest.fn(() => ({
+      select: jest.fn(() => ({
+        eq: jest.fn(() => ({
+          maybeSingle: jest.fn(async () => ({
+            data: { api_mode_override: null },
+            error: null,
+          })),
+        })),
+      })),
+    })),
+  })),
   createProjectWithLimit: jest.fn(async () => ({
     id: '11111111-1111-1111-1111-111111111111',
   })),
@@ -58,6 +83,7 @@ beforeEach(() => {
   process.env.N8N_GENERATE_PATH = '/generate';
   process.env.N8N_LIVE_VIEW_PATH = '/live';
   process.env.N8N_MEDIA_PATH = '/media';
+  process.env.N8N_CONTENT_TOOLS_PATH = '/webhook/techbliss-content-tools';
 
   process.env.NEXT_PUBLIC_SUPABASE_URL =
     'https://supabase.example.com';
@@ -222,4 +248,92 @@ test('generate accepts JSON job_id from n8n', async () => {
   } finally {
     global.fetch = originalFetch;
   }
+});
+
+test('media forwards a carousel slide using the verified workflow contract', async () => {
+  const originalFetch = global.fetch;
+  let sentPayload: Record<string, unknown> = {};
+  global.fetch = jest.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+    sentPayload = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    return new Response(JSON.stringify({ success: true, media_url: 'https://cdn.example.com/slide-1.png', status: 'completed' }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  }) as typeof fetch;
+
+  try {
+    const { POST } = await import('@/app/api/media/route');
+    const req = new NextRequest('http://localhost/api/media', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer test-token' },
+      body: JSON.stringify({
+        media_type: 'image', media_action: 'image_carousel', card_id: 'carousel-1',
+        platform: 'Image Studio', prompt: 'A clean product image with bright natural light',
+        variation_index: 1, variation_count: 4,
+      }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(sentPayload).toMatchObject({ media_type: 'image', media_action: 'image_carousel', variation_index: 1, variation_count: 4 });
+    expect((await res.json()).media_url).toBe('https://cdn.example.com/slide-1.png');
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('content tools forwards the workflow email variations schema', async () => {
+  const originalFetch = global.fetch;
+  let sentPayload: Record<string, unknown> = {};
+  global.fetch = jest.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+    sentPayload = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    return new Response(JSON.stringify({
+      success: true,
+      action: 'email_variations',
+      emails: [{ subject: 'A useful update', body: 'Hello there', notes: '' }, { subject: 'A second update', body: 'A different message', notes: '' }],
+      warnings: [],
+    }), { status: 200, headers: { 'content-type': 'application/json' } });
+  }) as typeof fetch;
+
+  try {
+    const { POST } = await import('@/app/api/content-tools/route');
+    const req = new NextRequest('http://localhost/api/content-tools', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer test-token' },
+      body: JSON.stringify({ action: 'email_variations', email: 'Source email content', subject: 'Source subject', count: 2 }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(sentPayload).toMatchObject({ action: 'email_variations', email: 'Source email content', subject: 'Source subject', count: 2 });
+    expect((await res.json()).emails).toHaveLength(2);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('content tools rejects a private source URL before calling n8n', async () => {
+  const fetchSpy = jest.spyOn(global, 'fetch');
+  const { POST } = await import('@/app/api/content-tools/route');
+  const req = new NextRequest('http://localhost/api/content-tools', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: 'Bearer test-token' },
+    body: JSON.stringify({ action: 'url_to_email', source_url: 'http://localhost/admin' }),
+  });
+  const res = await POST(req);
+  expect(res.status).toBe(400);
+  expect(fetchSpy).not.toHaveBeenCalled();
+});
+
+test('content tools reports missing webhook configuration without calling n8n', async () => {
+  delete process.env.N8N_CONTENT_TOOLS_PATH;
+  const fetchSpy = jest.spyOn(global, 'fetch');
+  const { POST } = await import('@/app/api/content-tools/route');
+  const req = new NextRequest('http://localhost/api/content-tools', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: 'Bearer test-token' },
+    body: JSON.stringify({ action: 'email_variations', email: 'A source email', count: 2 }),
+  });
+  const res = await POST(req);
+  expect(res.status).toBe(503);
+  expect((await res.json()).error).toContain('N8N_CONTENT_TOOLS_PATH');
+  expect(fetchSpy).not.toHaveBeenCalled();
 });

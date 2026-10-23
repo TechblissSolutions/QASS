@@ -1,5 +1,6 @@
 'use client';
 
+import { cleanGeneratedHtml, cleanGeneratedText, cleanPublishedHtml } from '@/lib/content-cleanup';
 import { useEffect, useRef, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
@@ -20,7 +21,6 @@ import { parseLiveViewHtml, splitIntoCards } from '@/lib/parser';
 
 import Modal from '@/components/Modal';
 
-import TimePicker from '@/components/TimePicker';
 
 import Chip from '@/components/Chip';
 
@@ -33,41 +33,57 @@ import StoreLoading from '@/components/StoreLoading';
 import CompanyHeader from '@/components/CompanyHeader';
 
 import SmartLogo from '@/components/SmartLogo';
+import ScheduleComposer from '@/components/ScheduleComposer';
 
 import { getSupabaseClient } from '@/lib/supabase';
 
 
 
 function PlatformIcon({ channel }: { channel: string }) {
-
   const ch = channel.toLowerCase();
+  const kind = ch === 'all'
+    ? 'all'
+    : ch.includes('instagram') ? 'instagram'
+      : ch.includes('facebook') ? 'facebook'
+        : ch.includes('linkedin') ? 'linkedin'
+          : ch.includes('twitter') || ch.includes('x/') ? 'twitter'
+            : ch.includes('youtube') ? 'youtube'
+              : ch.includes('website') || ch.includes('seo') ? 'website'
+                : ch.includes('ads') || ch.includes('email') || ch.includes('whatsapp') ? 'message'
+                  : ch.includes('blog') || ch.includes('video') ? 'article'
+                    : 'all';
 
-  let cls = 'default';
-
-  let letter = channel.charAt(0).toUpperCase();
-
-  if (ch.includes('instagram')) { cls = 'instagram'; letter = 'IG'; }
-
-  else if (ch.includes('facebook')) { cls = 'facebook'; letter = 'FB'; }
-
-  else if (ch.includes('linkedin')) { cls = 'linkedin'; letter = 'in'; }
-
-  else if (ch.includes('twitter') || ch.includes('x/')) { cls = 'x-twitter'; letter = 'X'; }
-
-  else if (ch.includes('youtube')) { cls = 'youtube'; letter = 'YT'; }
-
-  else if (ch.includes('website') || ch.includes('seo')) { cls = 'website'; letter = 'W'; }
-
-  else if (ch.includes('ads') || ch.includes('email') || ch.includes('whatsapp')) { cls = 'ads'; letter = 'Ad'; }
-
-  else if (ch.includes('blog') || ch.includes('video')) { cls = 'blog'; letter = 'Bl'; }
-
-  return <span className={'platform-icon-wrap ' + cls}>{letter}</span>;
+  return <span className={`platform-icon-wrap ${kind}`} aria-hidden="true">
+    <svg viewBox="0 0 20 20" fill="none">
+      {kind === 'all' && <><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="12" y="3" width="5" height="5" rx="1"/><rect x="3" y="12" width="5" height="5" rx="1"/><rect x="12" y="12" width="5" height="5" rx="1"/></>}
+      {kind === 'website' && <><circle cx="10" cy="10" r="7"/><path d="M3.5 10h13M10 3c2 2 3 4.3 3 7s-1 5-3 7c-2-2-3-4.3-3-7s1-5 3-7Z"/></>}
+      {kind === 'message' && <><rect x="3" y="4" width="14" height="12" rx="2"/><path d="m4 6 6 5 6-5"/></>}
+      {kind === 'article' && <><rect x="4" y="2.5" width="12" height="15" rx="2"/><path d="M7 7h6M7 10h6M7 13h4"/></>}
+      {kind === 'youtube' && <><rect x="2.5" y="5" width="15" height="10" rx="3"/><path d="m8.5 7.5 4.5 2.5-4.5 2.5v-5Z" fill="currentColor" stroke="none"/></>}
+      {kind === 'instagram' && <><rect x="3" y="3" width="14" height="14" rx="4"/><circle cx="10" cy="10" r="3.2"/><circle cx="14.5" cy="5.7" r=".8" fill="currentColor" stroke="none"/></>}
+      {kind === 'facebook' && <path d="M11.5 17v-6h2l.4-2.4h-2.4V7.1c0-.7.2-1.2 1.2-1.2H14V3.8c-.6-.1-1.2-.1-1.9-.1-2 0-3.3 1.2-3.3 3.4v1.5H7v2.4h1.8v6h2.7Z" fill="currentColor" stroke="none"/>}
+      {kind === 'linkedin' && <><path d="M5 8v8M5 5.2v.1M9 16v-4.5a2.5 2.5 0 0 1 5 0V16M9 9v7"/><circle cx="5" cy="5" r=".8" fill="currentColor" stroke="none"/></>}
+      {kind === 'twitter' && <path d="m4 4 12 12M16 4 4 16M5 4h3l7 12h-3L5 4Z"/>}
+    </svg>
+  </span>;
 
 }
 
+function platformDisplayName(channel: string) {
+  const value = String(channel || '').trim().toLowerCase();
+  if (value === 'ig' || value === 'instagram') return 'Instagram';
+  if (value === 'fb' || value === 'facebook') return 'Facebook';
+  if (value === 'in' || value === 'linkedin') return 'LinkedIn';
+  if (value === 'x' || value === 'twitter' || value === 'x/twitter' || value === 'x / twitter') return 'X / Twitter';
+  if (value === 'yt' || value === 'youtube') return 'YouTube';
+  if (value === 'bl' || value === 'blog' || value === 'blog & video') return 'Blog & video';
+  if (value === 'ads' || value === 'ads & messaging') return 'Ads & messaging';
+  if (value === 'web' || value === 'website') return 'Website';
+  return String(channel || '').trim();
+}
+
 function cleanVisibleContent(html: string) {
-  return String(html || '')
+  return cleanPublishedHtml(String(html || '')
     .replace(
       /<(p|div)[^>]*>\s*Blog\s*image\s*<\/\1>/gi,
       ''
@@ -76,12 +92,12 @@ function cleanVisibleContent(html: string) {
       /<(p|div)[^>]*>\s*Generate\s+one\s+branded\s+visual\s+for\s+this\s+position\.?\s*<\/\1>/gi,
       ''
     )
-    .trim();
+    .trim());
 }
 
 function mediaSpec(piece: Piece) {
 
-  const raw = String(piece.bodyText || '');
+  const raw = cleanGeneratedText(String(piece.bodyText || ''));
 
   const type =
   piece.section === 'blogs'
@@ -120,6 +136,13 @@ function safeHex(value: unknown, fallback: string) {
 
 }
 
+function contrastInk(color: string) {
+  const hex = safeHex(color, '#ffffff').slice(1);
+  const channels = [0, 2, 4].map(index => parseInt(hex.slice(index, index + 2), 16) / 255);
+  const linear = (value: number) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  const luminance = 0.2126 * linear(channels[0]) + 0.7152 * linear(channels[1]) + 0.0722 * linear(channels[2]);
+  return luminance > 0.179 ? '#111827' : '#ffffff';
+}
 
 
 function previewImageData(title: string, company: string, primary: string, background: string) {
@@ -130,7 +153,9 @@ function previewImageData(title: string, company: string, primary: string, backg
 
   const c = esc(company.slice(0, 42));
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675"><rect width="1200" height="675" fill="${background}"/><circle cx="1030" cy="110" r="210" fill="${primary}" opacity=".13"/><circle cx="150" cy="620" r="250" fill="${primary}" opacity=".09"/><rect x="70" y="70" width="1060" height="535" rx="34" fill="none" stroke="${primary}" stroke-width="3" opacity=".35"/><text x="100" y="145" font-family="Arial,sans-serif" font-size="24" font-weight="700" fill="${primary}">${c}</text><text x="100" y="315" font-family="Arial,sans-serif" font-size="54" font-weight="800" fill="${safeHex(background,'#ffffff') === '#ffffff' ? '#111111' : '#ffffff'}">${t}</text><text x="100" y="560" font-family="Arial,sans-serif" font-size="20" fill="${primary}">Preview image · Generate the final visual to replace this preview</text></svg>`;
+  const readableBackgroundInk = contrastInk(background);
+  const readablePrimaryInk = contrastInk(primary);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675"><rect width="1200" height="675" fill="${background}"/><circle cx="1030" cy="110" r="210" fill="${primary}" opacity=".13"/><circle cx="150" cy="620" r="250" fill="${primary}" opacity=".09"/><rect x="70" y="70" width="1060" height="535" rx="34" fill="none" stroke="${primary}" stroke-width="3" opacity=".35"/><text x="100" y="145" font-family="Arial,sans-serif" font-size="24" font-weight="700" fill="${readablePrimaryInk}">${c}</text><text x="100" y="315" font-family="Arial,sans-serif" font-size="54" font-weight="800" fill="${readableBackgroundInk}">${t}</text><text x="100" y="560" font-family="Arial,sans-serif" font-size="20" fill="${readablePrimaryInk}">Preview image · Generate the final visual to replace this preview</text></svg>`;
 
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 
@@ -369,6 +394,21 @@ function sectionsFromN8nResponse(data: any): Record<string, Piece[]> {
 
     : [];
 
+  const adCards = all.filter(card => {
+    const channel = card.channel.toLowerCase();
+    return channel.includes('ad') || channel.includes('message') || channel.includes('email') || channel.includes('whatsapp') || channel.includes('sms') || channel.includes('follow-up') || channel.includes('follow up');
+  });
+  const mergedAds: Piece[] = adCards.length ? [{
+    ...adCards[0],
+    id: 'generated-ads-messages',
+    channel: 'Ads & Messages',
+    section: 'ads',
+    title: 'Ads & Messages',
+    bodyText: adCards.map(card => `${card.channel}${card.title && card.title !== card.channel ? ` — ${card.title}` : ''}\n${card.bodyText || ''}`).join('\n\n'),
+    bodyHtml: adCards.map(card => `<section class=\"ads-message-item\"><h4>${String(card.channel || card.title || 'Content').replace(/[&<>\"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[ch] || ch))}</h4>${card.bodyHtml || `<p>${String(card.bodyText || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br/>')}</p>`}</section>`).join(''),
+    wordCount: adCards.reduce((sum, card) => sum + Number(card.wordCount || 0), 0),
+  } as Piece] : [];
+
   all.forEach((card, index) => {
 
     const channel = card.channel.toLowerCase();
@@ -377,7 +417,7 @@ function sectionsFromN8nResponse(data: any): Record<string, Piece[]> {
 
     if (socialNames.some(name => channel.includes(name))) section = 'social';
 
-    else if (channel.includes('ad') || channel.includes('message') || channel.includes('email') || channel.includes('whatsapp')) section = 'ads';
+    else if (channel.includes('ad') || channel.includes('message') || channel.includes('email') || channel.includes('whatsapp') || channel.includes('sms') || channel.includes('follow-up') || channel.includes('follow up')) return;
 
     else if (channel.includes('blog') || channel.includes('video')) return;
 
@@ -387,6 +427,7 @@ function sectionsFromN8nResponse(data: any): Record<string, Piece[]> {
 
   });
 
+  if (mergedAds.length) out.ads = mergedAds;
   if (mergedBlog.length) out.blogs = mergedBlog;
 
   return out;
@@ -409,9 +450,11 @@ const [editHtml,setEditHtml]=useState('');
 
 const[schedId,setSchedId]=useState<string|null>(null);
 
-  const [cancelBusy,setCancelBusy]=useState(false);const[regenerateBusy,setRegenerateBusy]=useState(false);const[canRegenerate,setCanRegenerate]=useState(false);const[showUpgrade,setShowUpgrade]=useState(false);const[schedDate,setSchedDate]=useState('');const[schedTime,setSchedTime]=useState('10:00');
+  const [cancelBusy,setCancelBusy]=useState(false);const[regenerateBusy,setRegenerateBusy]=useState(false);const[canRegenerate,setCanRegenerate]=useState(false);const[showUpgrade,setShowUpgrade]=useState(false);
 
   const [mediaState,setMediaState]=useState<Record<string,{url?:string;type?:string;error?:string;busy?:boolean}>>({});
+
+const openSched = (id: string) => { setSchedId(id); };
 
 
 
@@ -871,9 +914,39 @@ const[schedId,setSchedId]=useState<string|null>(null);
 
       const initialCount = Object.keys(initialSections).length;
 
-      const initialStatus = initialCount === SEC_META.length ? 'completed' : initialCount > 0 ? 'partial' : 'running';
+      const initialStatus = data.direct_provider
+  ? 'completed'
+  : initialCount === SEC_META.length
+    ? 'completed'
+    : initialCount > 0
+      ? 'partial'
+      : 'running';
 
-      set({jobId,jobRowId:data.jobRowId||null,liveViewToken:data.live_view_token||null,generationRequestId:data.request_id||null,jobStarted:Date.now(),finishedAt:null,generationStatus:initialStatus,sections:initialSections,schedule:{__selectedPlatforms:[...studioPlatforms]} as any,brandTheme:data.brandTheme?{...s.brandTheme,...data.brandTheme}:s.brandTheme});
+const finishedAt = data.direct_provider ? new Date().toISOString() : null;
+
+      set({
+  jobId,
+  jobRowId: data.jobRowId || null,
+  liveViewToken: data.live_view_token || null,
+  generationRequestId: data.request_id || null,
+  jobStarted: Date.now(),
+  finishedAt,
+  generationStatus: initialStatus,
+  sections: initialSections,
+  schedule: { __selectedPlatforms: [...studioPlatforms] } as any,
+  brandTheme: data.brandTheme
+    ? { ...s.brandTheme, ...data.brandTheme }
+    : s.brandTheme,
+});
+
+if (data.direct_provider && s.projectId && data.jobRowId) {
+  void persistJobState(s.projectId, data.jobRowId, {
+    sections: initialSections,
+    status: 'completed',
+    finished_at: finishedAt,
+    job_id: jobId,
+  });
+}
 
       router.replace(`/studio?project=${encodeURIComponent(s.projectId||'')}`);
 
@@ -889,7 +962,7 @@ const[schedId,setSchedId]=useState<string|null>(null);
 
   const retryGeneration=async()=>{
 
-    if(!s.profile||retryBusy)return;
+    if(!s.profile||retryBusy||!s.prefs.platforms?.length)return;
 
     setRetryBusy(true); setPollError('');
 
@@ -909,7 +982,38 @@ const[schedId,setSchedId]=useState<string|null>(null);
 
       const initialCount = Object.keys(initialSections).length;
 
-      const started=Date.now(); set({jobId,jobRowId:data.jobRowId||null,liveViewToken:data.live_view_token||null,generationRequestId:data.request_id||null,jobStarted:started,finishedAt:null,generationStatus:initialCount===SEC_META.length?'completed':initialCount?'partial':'running',sections:initialSections,schedule:{__selectedPlatforms:[...s.prefs.platforms]} as any,brandTheme:data.brandTheme?{...s.brandTheme,...data.brandTheme}:s.brandTheme});
+      const started = Date.now();
+const finishedAt = data.direct_provider ? new Date().toISOString() : null;
+
+set({
+  jobId,
+  jobRowId: data.jobRowId || null,
+  liveViewToken: data.live_view_token || null,
+  generationRequestId: data.request_id || null,
+  jobStarted: started,
+  finishedAt,
+  generationStatus: data.direct_provider
+    ? 'completed'
+    : initialCount === SEC_META.length
+      ? 'completed'
+      : initialCount
+        ? 'partial'
+        : 'running',
+  sections: initialSections,
+  schedule: { __selectedPlatforms: [...s.prefs.platforms] } as any,
+  brandTheme: data.brandTheme
+    ? { ...s.brandTheme, ...data.brandTheme }
+    : s.brandTheme,
+});
+
+if (data.direct_provider && s.projectId && data.jobRowId) {
+  void persistJobState(s.projectId, data.jobRowId, {
+    sections: initialSections,
+    status: 'completed',
+    finished_at: finishedAt,
+    job_id: jobId,
+  });
+}
 
     }catch(e){setPollError(e instanceof Error?e.message:'Generation failed.');}
 
@@ -921,15 +1025,27 @@ const[schedId,setSchedId]=useState<string|null>(null);
 
   const cancelGeneration=async()=>{
 
-    if(cancelBusy) return;
+    if(cancelBusy || !s.jobId) return;
 
     setCancelBusy(true);
 
     try {
-
-      set({generationStatus:'cancelled'});
-
-      toast('Generation monitoring stopped');
+      // Stop this client from polling immediately and persist the terminal state.
+      // The current n8n integration does not expose an execution-cancel endpoint,
+      // so this cannot terminate work already running inside n8n itself.
+      set({generationStatus:'cancelled', finishedAt:new Date().toISOString()});
+      if (s.projectId && s.jobRowId) {
+        const saved = await persistJobState(s.projectId, s.jobRowId, {
+          status: 'cancelled',
+          finished_at: new Date().toISOString(),
+          last_error: 'Cancelled by the user in Studio.',
+        });
+        if (!saved) {
+          toast('Stopped monitoring, but could not save cancellation status. Check your connection.');
+          return;
+        }
+      }
+      toast('Generation cancelled in Studio');
 
     } finally { setCancelBusy(false); }
 
@@ -971,7 +1087,37 @@ const[schedId,setSchedId]=useState<string|null>(null);
 
       const initialCount = Object.keys(initialSections).length;
 
-      set({jobId,jobRowId:data.jobRowId||null,liveViewToken:data.live_view_token||null,generationRequestId:data.request_id||null,jobStarted:Date.now(),finishedAt:null,generationStatus:initialCount===SEC_META.length?'completed':initialCount?'partial':'running',sections:initialSections,schedule:{__selectedPlatforms:[...s.prefs.platforms]} as any,brandTheme:data.brandTheme?{...s.brandTheme,...data.brandTheme}:s.brandTheme});
+      const finishedAt = data.direct_provider ? new Date().toISOString() : null;
+
+set({
+  jobId,
+  jobRowId: data.jobRowId || null,
+  liveViewToken: data.live_view_token || null,
+  generationRequestId: data.request_id || null,
+  jobStarted: Date.now(),
+  finishedAt,
+  generationStatus: data.direct_provider
+    ? 'completed'
+    : initialCount === SEC_META.length
+      ? 'completed'
+      : initialCount
+        ? 'partial'
+        : 'running',
+  sections: initialSections,
+  schedule: { __selectedPlatforms: [...s.prefs.platforms] } as any,
+  brandTheme: data.brandTheme
+    ? { ...s.brandTheme, ...data.brandTheme }
+    : s.brandTheme,
+});
+
+if (data.direct_provider && s.projectId && data.jobRowId) {
+  void persistJobState(s.projectId, data.jobRowId, {
+    sections: initialSections,
+    status: 'completed',
+    finished_at: finishedAt,
+    job_id: jobId,
+  });
+}
 
       toast('Improved content generation started');
 
@@ -1171,45 +1317,6 @@ const formatEditor = (command: string, value?: string) => {
   document.execCommand(command, false, value);
 };
 
-const downloadPiece = (p: Piece) => {
-  const text = [
-    p.title || '',
-    '',
-    p.bodyText.trim(),
-  ].join('\n');
-
-  const blob = new Blob([text], {
-    type: 'text/plain;charset=utf-8',
-  });
-
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-
-  const filename =
-    (p.title || 'sparrow-content')
-      .replace(/[<>:"/\\|?*]+/g, '-')
-      .trim()
-      .slice(0, 100) || 'sparrow-content';
-
-  link.href = url;
-  link.download = `${filename}.txt`;
-
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-
-  URL.revokeObjectURL(url);
-};
-
-
-  const localDate=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
-
-  const openSched=(id:string)=>{const c=s.schedule[id];setSchedId(id);setSchedDate(c?.date||localDate());setSchedTime(c?.time||'10:00');setViewId(null)};
-
-  const saveSched=(d:string,t:string)=>{if(!schedId)return;set({schedule:{...s.schedule,[schedId]:{date:d,time:t}}});setSchedId(null);toast('Scheduled')};
-
-  const removeSched=()=>{if(!schedId)return;const ns={...s.schedule};delete ns[schedId];set({schedule:ns});setSchedId(null);toast('Removed')};
-
   const company = s.profile?.company_name || '';
 
 
@@ -1222,11 +1329,49 @@ const downloadPiece = (p: Piece) => {
 
     <section className="studio-options-panel">
 
-      <div className="studio-options-head"><div><span>STUDIO</span><h2>Choose what Sparrow should create.</h2><p>Choose the channels and writing preferences for this generation.</p></div><button className="btn btn-primary" onClick={startGeneration} disabled={generateBusy||!studioPlatforms.length}>{generateBusy?'Starting…':'Generate content'}</button></div>
+      <div className="studio-options-head">
+        <div className="studio-options-intro">
+          <span className="studio-options-kicker"><i aria-hidden="true" /> STUDIO <span>·</span> CONTENT BRIEF</span>
+          <h1>Choose what Sparrow by TechBliss should create.</h1>
+          <p>Set the channels and point of view for your next review-ready draft.</p>
+        </div>
+        <button className="btn btn-primary studio-generate-action" onClick={startGeneration} disabled={generateBusy||!studioPlatforms.length}>
+          {generateBusy?'Starting…':'Generate content'}
+          {!generateBusy && <span aria-hidden="true">↗</span>}
+        </button>
+      </div>
 
       <div className="studio-options-grid">
 
-        <div className="studio-option-block"><label>Channels</label><div className="studio-channel-table">{PLATFORMS.map(pl=><button key={pl} type="button" className={studioPlatforms.includes(pl)?'selected':''} onClick={()=>setStudioPlatforms(prev=>prev.includes(pl)?prev.filter(x=>x!==pl):[...prev,pl])}><span className="studio-channel-dot" style={{background:colorFor(pl)[0]}}/><strong>{pl}</strong><span>{studioPlatforms.includes(pl)?'Selected':'Select'}</span></button>)}</div></div>
+        <div className="studio-option-block studio-channels-block">
+          <label>Channels</label>
+          <div className="studio-channel-table">
+            {PLATFORMS.map(pl => {
+              const selected = studioPlatforms.includes(pl);
+              const marks: Record<string, string> = {
+                Instagram: 'IG',
+                Facebook: 'f',
+                LinkedIn: 'in',
+                'X/Twitter': 'X',
+                YouTube: '▶',
+                Blogs: 'B',
+              };
+              return (
+                <button
+                  key={pl}
+                  type="button"
+                  className={selected ? 'selected' : ''}
+                  aria-pressed={selected}
+                  onClick={() => setStudioPlatforms(prev => prev.includes(pl) ? prev.filter(x => x !== pl) : [...prev, pl])}
+                >
+                  <span className="studio-channel-mark" style={{ '--channel-color': colorFor(pl)[0] } as React.CSSProperties} aria-hidden="true">{marks[pl] || pl.slice(0, 2)}</span>
+                  <strong>{pl}</strong>
+                  <span>{selected ? 'Selected' : 'Select'}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <div className="studio-option-block"><label htmlFor="studio-goal">Content goal</label><select id="studio-goal" className="select" value={studioGoal} onChange={e=>setStudioGoal(e.target.value)}><option>Brand / Product Awareness</option><option>Engagement</option></select></div>
 
@@ -1288,9 +1433,9 @@ const downloadPiece = (p: Piece) => {
 
         <button key={f} className="platform-tab" aria-pressed={filter===f} onClick={()=>setFilter(f)}>
 
-          {f !== 'all' && <PlatformIcon channel={f} />}
+          <PlatformIcon channel={f} />
 
-          {f === 'all' ? 'All' : f}
+          {f === 'all' ? 'All' : platformDisplayName(f)}
 
           <span className="count">{cnt(f)}</span>
 
@@ -1298,9 +1443,9 @@ const downloadPiece = (p: Piece) => {
 
       )})}
 
-      <div style={{marginLeft:'auto',display:'flex',gap:8,alignItems:'center'}}>
+      <div className="studio-results-tools">
 
-        <input className="input search" type="search" placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:200,padding:'7px 12px',fontSize:13}}/>
+        <input className="input search studio-search-input" type="search" aria-label="Search generated content" placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} />
 
         <button className="btn btn-ghost btn-sm" onClick={()=>router.push(`/calendar?project=${encodeURIComponent(s.projectId || '')}&job=${encodeURIComponent(s.jobRowId || '')}`)}>
 
@@ -1344,6 +1489,15 @@ const downloadPiece = (p: Piece) => {
 
         {channelPieces.map(p => (
 
+          p.section === 'ads' ? (
+            <div key={p.id} className="piece-card ads-messages-card">
+              <div className="ads-messages-card__head">
+                <div><span className="fmt">COPY-ONLY CONTENT</span><h3 className="piece-title">Ads &amp; Messages</h3><p>Google Ads, Meta Ads, email, WhatsApp, SMS and lead follow-ups.</p></div>
+                <button type="button" className="btn btn-ghost btn-sm ads-messages-card__copy" onClick={async () => { try { await navigator.clipboard.writeText(p.bodyText || ''); toast('Ads & messages copied'); } catch { toast('Copy failed. Please select and copy the text manually.'); } }}>Copy</button>
+              </div>
+              <div className="ads-messages-card__body" dangerouslySetInnerHTML={{__html: sanitizeHtml(cleanVisibleContent(p.bodyHtml || p.bodyText || ''))}} />
+            </div>
+          ) : (
           <div key={p.id} className="piece-card">
 
             <div className="piece-card-inner">
@@ -1392,26 +1546,6 @@ const downloadPiece = (p: Piece) => {
   </button>
 
   <button
-    className="btn btn-ghost btn-sm"
-    onClick={() => downloadPiece(p)}
-  >
-    Download
-  </button>
-
-  <button
-    className="btn btn-ghost btn-sm"
-    onClick={() => {
-      toast(
-        p.section === 'blogs'
-          ? 'WordPress import will be connected here.'
-          : `Import destination for ${p.channel} will be connected here.`
-      );
-    }}
-  >
-    Import
-  </button>
-
-  <button
     className="btn btn-primary btn-sm studio-schedule-button"
     onClick={() => openSched(p.id)}
   >
@@ -1438,13 +1572,14 @@ const downloadPiece = (p: Piece) => {
 
                 </div>
 
-                <div className="piece-body" dangerouslySetInnerHTML={{__html: sanitizeHtml(p.bodyHtml)}} />
+                <div className="piece-body" dangerouslySetInnerHTML={{__html: sanitizeHtml(cleanVisibleContent(p.bodyHtml))}} />
 
               </div>
 
             </div>
 
           </div>
+          )
 
         ))}
 
@@ -1466,7 +1601,7 @@ const downloadPiece = (p: Piece) => {
 
   {/* Detail modal */}
 
-<Modal open={!!vp} onClose={() => setViewId(null)}>
+<Modal open={!!vp} onClose={() => setViewId(null)} label="Content details">
   {vp && (
     <>
       <div className="m-head">
@@ -1560,7 +1695,7 @@ const downloadPiece = (p: Piece) => {
 
 {/* Edit modal */}
 
-<Modal open={!!editId} onClose={closeEditor}>
+<Modal open={!!editId} onClose={closeEditor} label="Edit content">
   <div className="m-head">
     <div style={{ flex: 1 }}>
       <span className="fmt">EDIT CONTENT</span>
@@ -2043,13 +2178,14 @@ const downloadPiece = (p: Piece) => {
 
 
 {schedId && piece(schedId) && (
-  <TimePicker
+  <ScheduleComposer
+    open={!!schedId}
+    projectId={s.projectId!}
     piece={piece(schedId)!}
-    initDate={schedDate}
-    initTime={schedTime}
-    hasExisting={!!s.schedule[schedId]}
-    onSave={saveSched}
-    onRemove={removeSched}
+    sourceJobId={s.jobRowId}
+    sourcePieceId={schedId}
+    brandTheme={s.brandTheme}
+    onSaved={() => toast('Post scheduled')}
     onClose={() => setSchedId(null)}
   />
 )}

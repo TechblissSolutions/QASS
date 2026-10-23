@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getProject, getJob, updateJob } from '@/lib/supabase';
 import { getEntitlementsForToken } from '@/lib/entitlements';
 import { assertServerEnv } from '@/lib/env';
+import { emailShell, escapeHtml, sendTransactionalEmail } from '@/lib/email-notifications';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -51,6 +52,22 @@ export async function POST(req: NextRequest) {
 
     const updated = await updateJob(jobRowId, patch, token);
     if (!updated) return NextResponse.json({ error: 'Unable to save generation history.' }, { status: 500 });
+
+    // Notify only on a transition into a terminal state, not on every autosave.
+    const terminal = new Set(['completed', 'partial', 'failed', 'cancelled']);
+    const nextStatus = typeof patch.status === 'string' ? patch.status : '';
+    const previousStatus = String((job as any).status || '');
+    if (nextStatus && terminal.has(nextStatus) && nextStatus !== previousStatus && entitlement.user.email) {
+      const title = nextStatus === 'completed' ? 'Your QASS content is ready' : nextStatus === 'partial' ? 'Your QASS content is partially ready' : nextStatus === 'failed' ? 'Your QASS generation failed' : 'Your QASS generation was cancelled';
+      const detail = nextStatus === 'completed'
+        ? 'Your generated content is ready to review in QASS Studio and History.'
+        : nextStatus === 'partial'
+          ? 'Some generated content may be available. Review the job in QASS History.'
+          : nextStatus === 'failed'
+            ? 'QASS could not complete this generation. Open History to review the job and retry after checking your settings.'
+            : 'This generation job was cancelled.';
+      void sendTransactionalEmail(entitlement.user.email, title, emailShell(title, `<p>${escapeHtml(detail)}</p><p><b>Project:</b> ${escapeHtml(projectId)}<br><b>Job:</b> ${escapeHtml(jobRowId)}<br><b>Status:</b> ${escapeHtml(nextStatus)}</p><p>Open QASS to review the job.</p>`)).catch(() => undefined);
+    }
     return NextResponse.json({ ok: true, job: updated });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to save generation history.';

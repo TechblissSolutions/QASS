@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   getAccessToken,
 } from '@/lib/auth';
@@ -20,6 +21,7 @@ import { useStore } from '@/lib/store';
 import AccountMenu from './AccountMenu';
 import Modal from './Modal';
 import SmartLogo from './SmartLogo';
+import createToolsStyles from './CreateTools.module.css';
 import {
   fetchBrandAppearance,
   brandThemeComplete,
@@ -298,14 +300,18 @@ export default function WorkspaceHome() {
           href="/"
           className="dashboard-v6-brand"
         >
-          Sparrow
+          Sparrow by TechBliss
         </a>
 
         <div className="dashboard-v6-header-center">
           YOUR WORKSPACE
         </div>
 
-        <AccountMenu />
+        <Link className={createToolsStyles.workspaceCreateLink} href="/create">
+          Create tools
+        </Link>
+
+        <AccountMenu initialAccount={account} />
       </header>
 
       <main className="dashboard-v6-main">
@@ -367,7 +373,7 @@ export default function WorkspaceHome() {
 
               <small>
                 Start with the company website and
-                Sparrow will build the workspace.
+                Sparrow by TechBliss will build the workspace.
               </small>
             </button>
           ) : (
@@ -387,18 +393,12 @@ export default function WorkspaceHome() {
 
                 const primary =
                   String(
-                    theme.primary_color || '#111111'
+                    theme.primary_color || '#f97316'
                   ).trim();
 
-                const background =
+                const secondary =
                   String(
-                    theme.background_color ||
-                      '#f4f4f0'
-                  ).trim();
-
-                const textColor =
-                  String(
-                    theme.text_color || '#111111'
+                    theme.secondary_color || primary
                   ).trim();
 
                 /*
@@ -410,33 +410,7 @@ export default function WorkspaceHome() {
                  */
                 const companyStyle = {
                   '--company-primary': primary,
-                  '--company-background': background,
-                  '--company-text': textColor,
-                } as React.CSSProperties;
-
-                /*
-                 * Explicit logo-box styling.
-                 *
-                 * Same geometry for every company:
-                 * - 150 × 150
-                 * - rounded corners
-                 * - 2px brand-colour border
-                 * - company-specific background
-                 * - no cropping
-                 */
-                const logoBoxStyle = {
-                  width: '150px',
-                  height: '150px',
-                  minWidth: '150px',
-                  minHeight: '150px',
-                  borderRadius: '18px',
-                  border: `2px solid ${primary}`,
-                  backgroundColor: background,
-                  color: primary,
-                  boxSizing: 'border-box',
-                  display: 'grid',
-                  placeItems: 'center',
-                  overflow: 'hidden',
+                  '--company-secondary': secondary,
                 } as React.CSSProperties;
 
                 return (
@@ -455,7 +429,6 @@ export default function WorkspaceHome() {
                     >
                       <span
                         className="dashboard-v6-logo dashboard-v6-logo-large"
-                        style={logoBoxStyle}
                       >
                         {logo ? (
                           <SmartLogo
@@ -474,13 +447,7 @@ export default function WorkspaceHome() {
                         )}
                       </span>
 
-                      <h3
-                        style={{
-                          color: primary,
-                        }}
-                      >
-                        {name}
-                      </h3>
+                      <h3>{name}</h3>
                     </button>
 
                     <button
@@ -551,6 +518,7 @@ export default function WorkspaceHome() {
       <Modal
         open={limitOpen}
         onClose={() => setLimitOpen(false)}
+        label="Company limit reached"
         small
       >
         <div className="panel-head">
