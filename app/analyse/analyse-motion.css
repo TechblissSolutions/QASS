@@ -1,0 +1,28 @@
+/* ─── Analyse loading screen: 3D scan scene ─────────────────────────────── */
+
+.analyse-loading-card .analyse-scene {
+  position: relative;
+  height: 260px;
+  margin: 18px 0 8px;
+  border-radius: var(--radius-surface, 16px);
+  overflow: hidden;
+}
+
+.analyse-loading-card .analyse-scene canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Fallback (no WebGL / still loading): keep the original indicator centred */
+.analyse-loading-card .analyse-scene > .analyse-loading-indicator {
+  position: absolute;
+  inset: auto 0 50% 0;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .analyse-loading-card .analyse-scene {
+    height: 200px;
+  }
+}

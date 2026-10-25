@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560">
+  <rect width="800" height="560" fill="#ff4b13"/>
+  <rect x="34" y="34" width="732" height="492" rx="18" fill="#ff6a3a"/>
+  <text x="58" y="94" fill="#fff" font-family="Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="4">BRAND DNA</text>
+  <text x="58" y="168" fill="#111" font-family="Arial, sans-serif" font-size="66" font-weight="900">MAKE IT</text>
+  <text x="58" y="232" fill="#111" font-family="Arial, sans-serif" font-size="66" font-weight="900">RECOGNISABLE.</text>
+  <rect x="58" y="286" width="210" height="92" rx="12" fill="#111"/>
+  <text x="78" y="323" fill="#fff" font-family="Arial, sans-serif" font-size="15" font-weight="700">AUDIENCE</text>
+  <text x="78" y="350" fill="#c8f169" font-family="Arial, sans-serif" font-size="22" font-weight="800">Clear</text>
+  <rect x="292" y="286" width="210" height="92" rx="12" fill="#fff"/>
+  <text x="312" y="323" fill="#777" font-family="Arial, sans-serif" font-size="15" font-weight="700">OFFER</text>
+  <text x="312" y="350" fill="#111" font-family="Arial, sans-serif" font-size="22" font-weight="800">Useful</text>
+  <rect x="526" y="286" width="210" height="92" rx="12" fill="#c8f169"/>
+  <text x="546" y="323" fill="#111" font-family="Arial, sans-serif" font-size="15" font-weight="700">VOICE</text>
+  <text x="546" y="350" fill="#111" font-family="Arial, sans-serif" font-size="22" font-weight="800">Human</text>
+  <path d="M58 430H742" stroke="#111" stroke-width="3"/>
+  <text x="58" y="470" fill="#111" font-family="Arial, sans-serif" font-size="20" font-weight="700">SOURCE → VISUAL SYSTEM → POST</text>
+</svg>

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560">
+  <rect width="800" height="560" fill="#f0f0ed"/>
+  <rect x="38" y="38" width="724" height="484" rx="18" fill="#fff" stroke="#111" stroke-width="3"/>
+  <text x="66" y="90" fill="#0a66c2" font-family="Arial, sans-serif" font-size="22" font-weight="800" letter-spacing="3">SOURCE → SIGNAL</text>
+  <rect x="66" y="128" width="290" height="250" rx="14" fill="#111"/>
+  <text x="92" y="170" fill="#c8f169" font-family="Arial, sans-serif" font-size="15" font-weight="800">WEBSITE</text>
+  <text x="92" y="218" fill="#fff" font-family="Arial, sans-serif" font-size="31" font-weight="800">Audience</text>
+  <text x="92" y="258" fill="#aaa" font-family="Arial, sans-serif" font-size="22">Offer</text>
+  <text x="92" y="294" fill="#aaa" font-family="Arial, sans-serif" font-size="22">Proof</text>
+  <text x="92" y="330" fill="#aaa" font-family="Arial, sans-serif" font-size="22">Voice</text>
+  <path d="M386 250H470" stroke="#ff4b13" stroke-width="8" stroke-linecap="round"/>
+  <path d="M450 228L474 250L450 272" fill="none" stroke="#ff4b13" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="502" y="128" width="230" height="250" rx="14" fill="#ff4b13"/>
+  <text x="528" y="170" fill="#111" font-family="Arial, sans-serif" font-size="15" font-weight="800">READY TO REVIEW</text>
+  <rect x="528" y="205" width="178" height="44" rx="8" fill="#111"/>
+  <text x="548" y="233" fill="#fff" font-family="Arial, sans-serif" font-size="16" font-weight="700">Hook</text>
+  <rect x="528" y="264" width="178" height="44" rx="8" fill="#fff"/>
+  <text x="548" y="292" fill="#111" font-family="Arial, sans-serif" font-size="16" font-weight="700">Point of view</text>
+  <rect x="528" y="323" width="178" height="24" rx="8" fill="#c8f169"/>
+  <text x="66" y="433" fill="#111" font-family="Arial, sans-serif" font-size="21" font-weight="700">A CLEARER BRIEF MAKES BETTER WORK.</text>
+  <text x="66" y="470" fill="#666" font-family="Arial, sans-serif" font-size="17">Brand context stays attached to the idea.</text>
+</svg>

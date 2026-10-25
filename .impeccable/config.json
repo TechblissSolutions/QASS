@@ -1,0 +1,23 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-10-25T01:31:32.374Z",
+        "reason": "Retained from the existing DESIGN.md typography stack; the redesign brief did not request a font change."
+      },
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "app/premium.css"
+        ],
+        "createdAt": "2026-10-25T01:39:41.627Z",
+        "reason": "Restore the existing warm landing headline exactly as requested; this is a pre-existing design feature, not a new redesign."
+      }
+    ]
+  }
+}

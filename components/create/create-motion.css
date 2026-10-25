@@ -1,0 +1,50 @@
+/* ─── Create tools: generating scene + result arrival ───────────────────── */
+
+.create-scene {
+  position: relative;
+  height: 220px;
+  margin: 0 0 16px;
+  border-radius: var(--radius-surface, 16px);
+  overflow: hidden;
+}
+
+/* No WebGL: take no space, the existing text status stays */
+.create-scene[data-ready="false"] {
+  display: none;
+}
+
+.create-scene canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Results slide in one by one when they actually arrive.
+   fill-mode "backwards" so hover transforms still work afterwards. */
+@keyframes create-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.create-arrive {
+  animation: create-arrive 420ms var(--motion-ease, cubic-bezier(0.23, 1, 0.32, 1)) backwards;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+@media (max-width: 640px) {
+  .create-scene {
+    height: 170px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .create-arrive {
+    animation: none;
+  }
+}

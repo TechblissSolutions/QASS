@@ -1,0 +1,125 @@
+/* ─── Sparrow ambient motion (app pages only) ───────────────────────────────
+   Everything here is gated by html[data-ambient="on"] (set from AmbientBackdrop),
+   so landing, auth, analyse and admin pages are untouched. */
+
+/* 1) Let the backdrop show through: paper colour moves to <html>, body goes clear */
+html[data-ambient="on"] {
+  background: var(--workspace-paper, #f4f1ec);
+}
+
+html[data-ambient="on"] body {
+  background: transparent;
+}
+
+html[data-ambient="on"] .company-workspace {
+  background: transparent !important;
+}
+
+/* 2) Fixed backdrop sits behind everything and never blocks clicks */
+.ambient-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ambient-backdrop canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* 3) Thin scroll-progress line (browsers with scroll-driven animations; hidden elsewhere) */
+.ambient-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 60;
+  height: 2px;
+  pointer-events: none;
+  background: var(--client-primary, var(--workspace-accent, #f97316));
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  animation: ambient-progress linear both;
+  animation-timeline: scroll(root block);
+}
+
+@keyframes ambient-progress {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@supports not (animation-timeline: scroll()) {
+  .ambient-progress {
+    display: none;
+  }
+}
+
+/* 4) Route enter: page fades in, then its content rises in a quick stagger.
+      Opacity-only on the outer layout so fixed sidebars/dialogs never shift. */
+@keyframes route-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes route-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+html.route-enter .app-layout > main > * {
+  animation: route-fade 300ms var(--motion-ease, cubic-bezier(0.23, 1, 0.32, 1)) backwards;
+}
+
+html.route-enter .app-layout main main > * {
+  animation: route-rise 420ms var(--motion-ease, cubic-bezier(0.23, 1, 0.32, 1)) backwards;
+}
+
+html.route-enter .app-layout main main > *:nth-child(2) { animation-delay: 70ms; }
+html.route-enter .app-layout main main > *:nth-child(3) { animation-delay: 140ms; }
+html.route-enter .app-layout main main > *:nth-child(4) { animation-delay: 210ms; }
+html.route-enter .app-layout main main > *:nth-child(n + 5) { animation-delay: 280ms; }
+
+/* 5) Respect reduced motion: no animation, no scroll line */
+@media (prefers-reduced-motion: reduce) {
+  html.route-enter .app-layout > main > *,
+  html.route-enter .app-layout main main > * {
+    animation: none !important;
+  }
+
+  .ambient-progress {
+    display: none;
+  }
+}
+html[data-ambient="on"] .app-layout,
+html[data-ambient="on"] .app-layout > main,
+html[data-ambient="on"] .app-layout > main > *,
+html[data-ambient="on"] .app-layout main main {
+  background: transparent !important;
+}
+html[data-ambient="on"] .sparrow-global-page {
+  background: transparent !important;
+}
+/* ─── Studio fix: keep the 3D backdrop visible after the page has loaded ─────
+   premium.css paints the paper colour on .page-container / the sidebar's sibling
+   <main> (with !important), which hid the backdrop once content rendered. The same
+   paper colour already lives on <html>, so the look is identical; only the backdrop
+   now shows through. Cards/panels keep their own solid backgrounds. */
+html[data-ambient="on"] .company-workspace .page-container,
+html[data-ambient="on"] .company-workspace .company-history-page,
+html[data-ambient="on"] .company-workspace .company-sidebar ~ .page-container,
+html[data-ambient="on"] .company-workspace .company-sidebar ~ main {
+  background-color: transparent !important;
+  background-image: radial-gradient(ellipse at 90% 0, rgb(249 115 22 / 5%), transparent 34%) !important;
+}

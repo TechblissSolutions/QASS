@@ -1,0 +1,258 @@
+/* ─── Sparrow futuristic motion layer ───────────────────────────────────────
+   Motion + depth only. No colours, fonts or layouts are redefined: every tint
+   is derived from the existing --client-primary / --workspace-accent variables.
+   Everything is gated by html.fx-ready (set by FuturisticFX) so the app is
+   fully usable if JS fails, and disabled for reduced-motion users. */
+
+:root {
+  --fx-accent: var(--client-primary, var(--workspace-accent, #f97316));
+  --fx-ease: var(--motion-ease, cubic-bezier(0.23, 1, 0.32, 1));
+}
+
+/* 1) Cursor light: soft accent glow that follows the pointer (behind the cards) */
+.fx-cursor-glow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1; /* sits behind every card and panel, above the 3D backdrop */
+  width: 520px;
+  height: 520px;
+  margin: -260px 0 0 -260px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle, color-mix(in srgb, var(--fx-accent) 14%, transparent), transparent 62%);
+  transform: translate3d(var(--fx-x, -999px), var(--fx-y, -999px), 0);
+  transition: opacity 400ms var(--fx-ease);
+  will-change: transform, opacity;
+}
+html.fx-ready.fx-pointer .fx-cursor-glow { opacity: 1; }
+
+/* 2) 3D tilt on cards (class toggled by JS only while hovered) */
+html.fx-ready .fx-tilt {
+  transform: perspective(900px) rotateX(var(--fx-rx, 0deg)) rotateY(var(--fx-ry, 0deg)) translateZ(0);
+  transform-style: preserve-3d;
+  transition: transform 140ms var(--fx-ease), box-shadow 240ms var(--fx-ease);
+  box-shadow: 0 18px 40px -18px color-mix(in srgb, var(--fx-accent) 38%, transparent);
+  will-change: transform;
+}
+html.fx-ready .fx-tilt-reset {
+  transition: transform 520ms var(--fx-ease), box-shadow 320ms var(--fx-ease);
+}
+
+/* 3) Scroll reveal with depth (only applied to below-the-fold items) */
+html.fx-ready [data-fx-reveal] {
+  opacity: 0;
+  transform: perspective(900px) translate3d(0, 28px, -40px) rotateX(6deg);
+  transition: opacity 620ms var(--fx-ease), transform 760ms var(--fx-ease);
+  transition-delay: var(--fx-delay, 0ms);
+}
+html.fx-ready [data-fx-reveal].fx-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* 4) Buttons: lift on hover, magnetic pull (JS), pressed depth, light sweep */
+html.fx-ready .btn-primary,
+html.fx-ready .auth-submit,
+html.fx-ready .landing-v6-primary,
+html.fx-ready .landing-v6-cta {
+  position: relative;
+  overflow: hidden;
+  translate: var(--fx-mx, 0) var(--fx-my, 0);
+  transition: translate 220ms var(--fx-ease), transform var(--motion-fast, 140ms) var(--fx-ease), box-shadow 240ms var(--fx-ease);
+}
+html.fx-ready .btn-primary:hover,
+html.fx-ready .auth-submit:hover {
+  box-shadow: 0 12px 28px -10px color-mix(in srgb, var(--fx-accent) 55%, transparent);
+}
+html.fx-ready .btn-primary::after,
+html.fx-ready .auth-submit::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 22%) 50%, transparent 65%);
+  transform: translateX(-120%);
+}
+html.fx-ready .btn-primary:hover::after,
+html.fx-ready .auth-submit:hover::after {
+  transform: translateX(120%);
+  transition: transform 700ms var(--fx-ease);
+}
+
+/* 5) Sidebar / nav: smooth slide-in hover indicator */
+html.fx-ready .company-sidebar a,
+html.fx-ready .sparrow-global-nav a {
+  transition: transform 200ms var(--fx-ease), color 160ms var(--fx-ease), background-color 160ms var(--fx-ease);
+}
+html.fx-ready .company-sidebar a:hover,
+html.fx-ready .sparrow-global-nav a:hover {
+  transform: translateX(3px);
+}
+
+/* 6) Auth + pricing: gentle floating depth */
+@keyframes fx-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+html.fx-ready .auth-logo { animation: fx-float 6s ease-in-out infinite; }
+html.fx-ready .pricing-card.featured { animation: fx-float 7s ease-in-out infinite; }
+
+/* 7) Inputs: subtle accent glow on focus */
+html.fx-ready .field input:focus,
+html.fx-ready .field textarea:focus,
+html.fx-ready .field select:focus {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--fx-accent) 16%, transparent);
+  transition: box-shadow 220ms var(--fx-ease);
+}
+
+/* Touch + reduced motion: switch it all off */
+@media (hover: none) {
+  .fx-cursor-glow { display: none; }
+  html.fx-ready .fx-tilt { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fx-cursor-glow { display: none; }
+  html.fx-ready .fx-tilt { transform: none; box-shadow: none; }
+  html.fx-ready [data-fx-reveal] { opacity: 1; transform: none; transition: none; }
+  html.fx-ready .btn-primary,
+  html.fx-ready .auth-submit { translate: none; }
+  html.fx-ready .auth-logo,
+  html.fx-ready .pricing-card.featured { animation: none; }
+}
+
+/* ─── Sign in / sign up: 3D scene + staged entrance ──────────────────────────
+   Uses the page's existing orange tint (--fx-accent). No colours or layout changed. */
+.fx-auth-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  perspective: 1200px;
+}
+.fx-auth-layer {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 300ms var(--fx-ease);
+}
+.fx-auth-layer-far  { transform: translate3d(calc(var(--fx-px, 0) * -14px), calc(var(--fx-py, 0) * -10px), 0); }
+.fx-auth-layer-near { transform: translate3d(calc(var(--fx-px, 0) * 26px),  calc(var(--fx-py, 0) * 18px), 0); }
+
+.fx-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(46px);
+  background: radial-gradient(circle, color-mix(in srgb, var(--fx-accent, #f97316) 34%, transparent), transparent 68%);
+  animation: fx-drift 14s ease-in-out infinite;
+}
+.fx-orb-a { width: 380px; height: 380px; top: -8%; left: -6%; }
+.fx-orb-b { width: 460px; height: 460px; right: -10%; bottom: -14%; animation-duration: 18s; animation-direction: reverse; }
+@keyframes fx-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33%      { transform: translate3d(60px, 40px, 0) scale(1.12); }
+  66%      { transform: translate3d(-30px, 70px, 0) scale(0.94); }
+}
+
+.fx-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--fx-accent, #f97316) 38%, transparent);
+  box-shadow: inset 0 0 40px color-mix(in srgb, var(--fx-accent, #f97316) 10%, transparent);
+}
+.fx-ring-a { width: 520px; height: 520px; top: 50%; left: 50%; margin: -260px 0 0 -260px; animation: fx-spin-a 26s linear infinite; }
+.fx-ring-b { width: 300px; height: 300px; top: 12%; right: 9%; animation: fx-spin-b 20s linear infinite; }
+@keyframes fx-spin-a { from { transform: rotateX(72deg) rotateZ(0deg); }   to { transform: rotateX(72deg) rotateZ(360deg); } }
+@keyframes fx-spin-b { from { transform: rotateY(62deg) rotateZ(0deg); }   to { transform: rotateY(62deg) rotateZ(-360deg); } }
+
+.fx-cube {
+  position: absolute;
+  left: 9%;
+  bottom: 14%;
+  width: 96px;
+  height: 96px;
+  transform-style: preserve-3d;
+  animation: fx-cube 22s linear infinite;
+}
+.fx-cube i {
+  position: absolute;
+  inset: 0;
+  border: 1px solid color-mix(in srgb, var(--fx-accent, #f97316) 46%, transparent);
+  background: color-mix(in srgb, var(--fx-accent, #f97316) 5%, transparent);
+}
+.fx-cube i:nth-child(1) { transform: translateZ(48px); }
+.fx-cube i:nth-child(2) { transform: rotateY(180deg) translateZ(48px); }
+.fx-cube i:nth-child(3) { transform: rotateY(90deg) translateZ(48px); }
+.fx-cube i:nth-child(4) { transform: rotateY(-90deg) translateZ(48px); }
+.fx-cube i:nth-child(5) { transform: rotateX(90deg) translateZ(48px); }
+.fx-cube i:nth-child(6) { transform: rotateX(-90deg) translateZ(48px); }
+@keyframes fx-cube { from { transform: rotateX(-24deg) rotateY(0deg); } to { transform: rotateX(-24deg) rotateY(360deg); } }
+
+.fx-dot {
+  position: absolute;
+  bottom: -12px;
+  left: calc(var(--n) * 11% + 4%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--fx-accent, #f97316) 70%, transparent);
+  opacity: 0;
+  animation: fx-rise calc(9s + var(--n) * 1.3s) linear calc(var(--n) * -2.1s) infinite;
+}
+@keyframes fx-rise {
+  0%   { transform: translate3d(0, 0, 0); opacity: 0; }
+  12%  { opacity: 0.8; }
+  100% { transform: translate3d(calc((var(--n) - 4) * 10px), -105vh, 0); opacity: 0; }
+}
+
+/* Card: 3D entrance, then fields stagger in (pure CSS, no flash if JS is slow) */
+@keyframes fx-card-in {
+  from { opacity: 0; transform: perspective(1100px) translate3d(0, 34px, -80px) rotateX(10deg); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes fx-field-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+.auth-page .auth-card { animation: fx-card-in 780ms var(--fx-ease) both; }
+.auth-page .auth-card > *,
+.auth-page .auth-card form > * { animation: fx-field-in 560ms var(--fx-ease) both; }
+.auth-page .auth-card > *:nth-child(1) { animation-delay: 160ms; }
+.auth-page .auth-card > *:nth-child(2) { animation-delay: 220ms; }
+.auth-page .auth-card > *:nth-child(3) { animation-delay: 280ms; }
+.auth-page .auth-card > *:nth-child(4) { animation-delay: 340ms; }
+.auth-page .auth-card > *:nth-child(n+5) { animation-delay: 400ms; }
+.auth-page .auth-card form > *:nth-child(1) { animation-delay: 380ms; }
+.auth-page .auth-card form > *:nth-child(2) { animation-delay: 450ms; }
+.auth-page .auth-card form > *:nth-child(3) { animation-delay: 520ms; }
+.auth-page .auth-card form > *:nth-child(4) { animation-delay: 590ms; }
+.auth-page .auth-card form > *:nth-child(n+5) { animation-delay: 660ms; }
+
+/* Gentler tilt on the form card, and an accent glow on focused inputs */
+html.fx-ready .auth-card.fx-tilt {
+  transform: perspective(1100px) rotateX(calc(var(--fx-rx, 0deg) * 0.45)) rotateY(calc(var(--fx-ry, 0deg) * 0.45));
+}
+html.fx-ready .auth-card input:focus {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--fx-accent, #f97316) 16%, transparent);
+  transition: box-shadow 220ms var(--fx-ease);
+}
+
+@media (max-width: 700px) {
+  .fx-cube, .fx-ring-b { display: none; }
+  .fx-ring-a { width: 360px; height: 360px; margin: -180px 0 0 -180px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fx-orb, .fx-ring, .fx-cube, .fx-dot { animation: none; }
+  .fx-dot { display: none; }
+  .fx-auth-layer { transform: none !important; transition: none; }
+  .auth-page .auth-card,
+  .auth-page .auth-card > *,
+  .auth-page .auth-card form > * { animation: none; }
+}
+
+/* ─── Pricing: reuse the 3D scene behind the plans ─────────────────────────── */
+.pricing-page { position: relative; }
+.pricing-page > :not(.fx-auth-scene) { position: relative; z-index: 1; }
+.pricing-page > .fx-auth-scene { z-index: 0; }

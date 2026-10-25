@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-25T01:27:46Z",
+  "title": "Design System: Sparrow by TechBliss",
+  "extensions": {
+    "colorMeta": {
+      "night-950": {
+        "role": "neutral",
+        "displayName": "Night 950",
+        "canonical": "#070910"
+      },
+      "night-900": {
+        "role": "neutral",
+        "displayName": "Night 900",
+        "canonical": "#0a0d16"
+      },
+      "night-850": {
+        "role": "neutral",
+        "displayName": "Night 850",
+        "canonical": "#0d1220"
+      },
+      "night-800": {
+        "role": "neutral",
+        "displayName": "Night 800",
+        "canonical": "#111827"
+      },
+      "night-750": {
+        "role": "neutral",
+        "displayName": "Night 750",
+        "canonical": "#151e30"
+      },
+      "electric-blue": {
+        "role": "primary",
+        "displayName": "Electric Blue",
+        "canonical": "#8495ff"
+      },
+      "electric-blue-bright": {
+        "role": "primary",
+        "displayName": "Electric Blue Bright",
+        "canonical": "#a5b0ff"
+      },
+      "violet": {
+        "role": "secondary",
+        "displayName": "Violet",
+        "canonical": "#b28aff"
+      },
+      "cyan": {
+        "role": "tertiary",
+        "displayName": "Cyan",
+        "canonical": "#65d9ef"
+      },
+      "ink-strong": {
+        "role": "neutral",
+        "displayName": "Strong Ink",
+        "canonical": "#f2f4ff"
+      },
+      "ink-body": {
+        "role": "neutral",
+        "displayName": "Body Ink",
+        "canonical": "#c3cbe0"
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "#8f9bb8"
+      },
+      "line-subtle": {
+        "role": "neutral",
+        "displayName": "Subtle Line",
+        "canonical": "rgba(162, 177, 219, 0.13)"
+      },
+      "success": {
+        "role": "tertiary",
+        "displayName": "Success",
+        "canonical": "#5fe0ba"
+      },
+      "warning": {
+        "role": "tertiary",
+        "displayName": "Warning",
+        "canonical": "#ffca72"
+      },
+      "danger": {
+        "role": "tertiary",
+        "displayName": "Danger",
+        "canonical": "#ff7e92"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Workspace display",
+        "purpose": "Balanced page titles and major section headings."
+      },
+      "body": {
+        "displayName": "Workspace body",
+        "purpose": "Readable interface, form, and content text."
+      }
+    },
+    "shadows": [
+      {
+        "name": "panel",
+        "value": "0 22px 60px rgba(0, 0, 0, 0.24)",
+        "purpose": "Separate raised work areas from the midnight canvas."
+      },
+      {
+        "name": "focus",
+        "value": "0 0 0 3px rgba(132, 149, 255, 0.24)",
+        "purpose": "Pair with the visible electric-blue keyboard focus outline."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.2, 0.8, 0.2, 1)",
+        "purpose": "Short control transitions and page entrance."
+      },
+      {
+        "name": "duration-fast",
+        "value": "150ms",
+        "purpose": "Immediate press and color feedback."
+      },
+      {
+        "name": "duration-standard",
+        "value": "220ms",
+        "purpose": "Selection and panel state changes."
+      },
+      {
+        "name": "duration-enter",
+        "value": "440ms",
+        "purpose": "One restrained page entrance reveal."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "tablet",
+        "value": "1040px"
+      },
+      {
+        "name": "mobile",
+        "value": "760px"
+      },
+      {
+        "name": "compact-mobile",
+        "value": "620px"
+      }
+    ]
+  },
+  "components": [],
+  "narrative": {
+    "northStar": "The Midnight Creative Workspace",
+    "overview": "A focused AI-native workspace with midnight surfaces and electric-blue and violet signals. Layered panels and quiet light support sustained work; motion clarifies real progress, selection, and content arrival. The product stays legible and familiar while company context guides creative work.",
+    "keyCharacteristics": [
+      "Midnight surfaces establish the global Sparrow workspace.",
+      "Electric blue leads actions and focus; violet is a restrained secondary accent.",
+      "Company identities remain scoped to their selected workspace and content.",
+      "Clear hierarchy, visible focus, and responsive controls support daily work.",
+      "Motion is brief, purposeful, and reduced when requested."
+    ],
+    "rules": [
+      {
+        "name": "The Contextual Brand Rule",
+        "body": "A company logo, colors, and assets apply only to that company's workspace and content. Sparrow's palette must not replace the active company's theme variables.",
+        "section": "colors"
+      },
+      {
+        "name": "The Quiet Depth Rule",
+        "body": "Use layered surface tones and soft, offset shadows for meaningful separation; reserve glow for a clear interaction or ambient accent.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Purposeful Motion Rule",
+        "body": "Motion clarifies navigation, progress, selection, or content arrival; essential state remains clear without animation.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Use electric blue and violet as restrained global product accents.",
+      "Use the active project's client variables for company-context actions and selected states.",
+      "Keep semantic success, warning, and danger colors consistent.",
+      "Maintain visible keyboard focus, readable contrast, responsive layouts, and reduced-motion support.",
+      "Use short transitions and one restrained page entrance."
+    ],
+    "donts": [
+      "Do not apply a selected company's identity as Sparrow's global identity.",
+      "Do not imply unsupported AI workflows, integrations, or payment functionality.",
+      "Avoid constant motion, excessive glow, gradient text, and decorative clutter.",
+      "Do not rely on color alone to communicate state.",
+      "Do not change authentication, generation, scheduling, or data contracts as a visual redesign."
+    ]
+  }
+}

@@ -1,0 +1,196 @@
+/* ─── Sparrow motion system v2 ───────────────────────────────────────────────
+   Fills the gaps left by premium.css (which already animates routes, sections,
+   landing, modals, toasts). Motion only: no colours, fonts or layouts change.
+   Safe-by-design:
+   • entrances use fill-mode "backwards" so they never freeze a transform (tilt keeps working)
+   • hover/press use the independent `translate` / `scale` / `rotate` properties,
+     so they never collide with existing `transform` rules
+   • everything is disabled for prefers-reduced-motion                              */
+
+:root {
+  --mx-ease: var(--motion-ease, cubic-bezier(0.23, 1, 0.32, 1));
+  --mx-accent: var(--client-primary, var(--workspace-accent, #f97316));
+}
+
+/* 1) Entrances: depth-pop for generated content and panel lists, staggered */
+@keyframes mx-pop {
+  from { opacity: 0; transform: perspective(900px) translate3d(0, 20px, -30px) rotateX(7deg) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes mx-slide {
+  from { opacity: 0; transform: translate3d(-14px, 0, 0); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes mx-drop {
+  from { opacity: 0; transform: translate3d(0, -10px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+
+.sq,
+.pricing-grid > *,
+.api-settings__service,
+.profile-panel,
+.admin-panel,
+.analyse-card,
+.work-card {
+  animation: mx-pop 560ms var(--mx-ease) backwards;
+}
+.company-history-list > *,
+.schedule-account-choice,
+.previous-post-item,
+.admin-nav-item {
+  animation: mx-slide 460ms var(--mx-ease) backwards;
+}
+.auth-notice,
+.api-settings__message,
+.banner {
+  animation: mx-drop 360ms var(--mx-ease) backwards;
+}
+
+/* stagger by position (first twelve; later ones simply appear) */
+:is(.sq, .pricing-grid > *, .api-settings__service, .company-history-list > *, .schedule-account-choice, .previous-post-item, .admin-nav-item):nth-child(1) { animation-delay: 0ms; }
+:is(.sq, .pricing-grid > *, .api-settings__service, .company-history-list > *, .schedule-account-choice, .previous-post-item, .admin-nav-item):nth-child(2) { animation-delay: 60ms; }
+:is(.sq, .pricing-grid > *, .api-settings__service, .company-history-list > *, .schedule-account-choice, .previous-post-item, .admin-nav-item):nth-child(3) { animation-delay: 120ms; }
+:is(.sq, .pricing-grid > *, .api-settings__service, .company-history-list > *, .schedule-account-choice, .previous-post-item, .admin-nav-item):nth-child(4) { animation-delay: 180ms; }
+:is(.sq, .pricing-grid > *, .api-settings__service, .company-history-list > *, .schedule-account-choice, .previous-post-item, .admin-nav-item):nth-child(5) { animation-delay: 240ms; }
+:is(.sq, .pricing-grid > *, .api-settings__service, .company-history-list > *, .schedule-account-choice, .previous-post-item, .admin-nav-item):nth-child(6) { animation-delay: 300ms; }
+:is(.sq, .pricing-grid > *, .api-settings__service, .company-history-list > *, .schedule-account-choice, .previous-post-item, .admin-nav-item):nth-child(7) { animation-delay: 360ms; }
+:is(.sq, .pricing-grid > *, .api-settings__service, .company-history-list > *, .schedule-account-choice, .previous-post-item, .admin-nav-item):nth-child(8) { animation-delay: 420ms; }
+:is(.sq, .pricing-grid > *, .api-settings__service, .company-history-list > *, .schedule-account-choice, .previous-post-item, .admin-nav-item):nth-child(n + 9) { animation-delay: 480ms; }
+
+/* 2) Errors get attention: a short shake */
+@keyframes mx-shake {
+  0%, 100% { transform: none; }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+.err,
+.auth-error,
+.api-settings__message.is-error {
+  animation: mx-shake 420ms var(--mx-ease) backwards;
+}
+
+/* 3) Selection pulse (chosen API service, chosen options) */
+@keyframes mx-select {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--mx-accent) 38%, transparent); }
+  100% { box-shadow: 0 0 0 12px color-mix(in srgb, var(--mx-accent) 0%, transparent); }
+}
+.api-settings__service.is-selected { animation: mx-select 620ms var(--mx-ease) 1; }
+
+/* 4) Hover lift + press feedback (independent properties, no transform clashes) */
+@media (hover: hover) {
+  .work-card,
+  .analyse-card,
+  .profile-panel,
+  .admin-panel,
+  .panel,
+  .api-settings__service,
+  .previous-post-item {
+    transition: translate 260ms var(--mx-ease), box-shadow 260ms var(--mx-ease);
+  }
+  .work-card:hover,
+  .analyse-card:hover,
+  .profile-panel:hover,
+  .admin-panel:hover,
+  .panel:hover,
+  .api-settings__service:hover,
+  .previous-post-item:hover {
+    translate: 0 -3px;
+    box-shadow: 0 14px 34px -16px color-mix(in srgb, var(--mx-accent) 34%, transparent);
+  }
+  .btn:hover,
+  .btn-icon:hover,
+  .schedule-add-btn:hover,
+  .account-trigger:hover {
+    translate: 0 -1px;
+  }
+  .btn-icon:hover { rotate: -6deg; scale: 1.06; }
+  .schedule-add-btn:hover { scale: 1.04; }
+  .ch:hover { scale: 1.05; }
+  .account-trigger:hover .account-avatar { scale: 1.08; }
+  .company-sidebar a:hover .sidebar-nav-icon,
+  .sparrow-global-nav a:hover .sidebar-nav-icon { scale: 1.14; rotate: -7deg; }
+  .company-sidebar-logo:hover { rotate: -4deg; scale: 1.05; }
+}
+.btn,
+.btn-icon,
+.schedule-add-btn,
+.ch,
+.account-avatar,
+.sidebar-nav-icon,
+.company-sidebar-logo,
+.account-trigger {
+  transition: translate 200ms var(--mx-ease), scale 200ms var(--mx-ease), rotate 240ms var(--mx-ease), background-color 160ms var(--mx-ease), border-color 160ms var(--mx-ease), box-shadow 220ms var(--mx-ease);
+}
+.btn:active,
+.btn-icon:active,
+.schedule-add-btn:active,
+.ch:active,
+.auth-submit:active {
+  scale: 0.96;
+  translate: 0 0;
+}
+
+/* 5) Empty states breathe (calendar, history) */
+@keyframes mx-breathe {
+  0%, 100% { translate: 0 0; opacity: 0.92; }
+  50%      { translate: 0 -5px; opacity: 1; }
+}
+.planner-empty,
+.admin-empty { animation: mx-breathe 5.5s ease-in-out infinite; }
+
+/* 6) Loading: soft pulse on the text beside spinners */
+@keyframes mx-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+.dashboard-v6-spinner ~ span,
+.company-history-loading span { animation: mx-pulse 1.6s ease-in-out infinite; }
+
+/* 7) Progress bars glide when their width changes */
+.studio-generation-progress span,
+.analyse-progress-fill { transition: width 600ms var(--mx-ease); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sq, .pricing-grid > *, .api-settings__service, .profile-panel, .admin-panel, .analyse-card, .work-card,
+  .company-history-list > *, .schedule-account-choice, .previous-post-item, .admin-nav-item,
+  .auth-notice, .api-settings__message, .banner, .err, .auth-error,
+  .planner-empty, .admin-empty,
+  .dashboard-v6-spinner ~ span, .company-history-loading span { animation: none; }
+  .btn, .btn-icon, .schedule-add-btn, .ch, .account-avatar, .sidebar-nav-icon, .company-sidebar-logo, .account-trigger,
+  .work-card, .analyse-card, .profile-panel, .admin-panel, .panel, .api-settings__service, .previous-post-item {
+    transition: none;
+    translate: none !important;
+    scale: none !important;
+    rotate: none !important;
+  }
+}
+
+/* 8) "Generating content…" animated typing dots in Studio */
+@keyframes mx-dots { to { width: 1.15em; } }
+.studio-generation-row > span::after {
+  content: "...";
+  display: inline-block;
+  width: 0;
+  overflow: hidden;
+  vertical-align: bottom;
+  animation: mx-dots 1.4s steps(4, end) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio-generation-row > span::after { animation: none; width: auto; }
+}
+
+/* 9) Typing caret for freshly generated content previews */
+@keyframes mx-caret { 50% { opacity: 0; } }
+.mx-caret {
+  display: inline-block;
+  width: 0;
+  height: 1em;
+  margin-right: -1px;
+  vertical-align: text-bottom;
+  border-right: 2px solid var(--mx-accent);
+  animation: mx-caret 0.8s steps(1) infinite;
+}
+@media (prefers-reduced-motion: reduce) { .mx-caret { display: none; } }
