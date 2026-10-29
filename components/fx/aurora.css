@@ -1,0 +1,29 @@
+/* Aurora backdrop. Transform-only animation on pre-faded gradients (no blur filter), so it is cheap.
+   Visible only when AuroraBackdrop sets data-aurora on <html>; it is never set on admin. */
+.ab { --ab-accent: var(--sparrow-orange, #d03e7c); position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity 0.9s ease; }
+html:not([data-aurora]) .ab { display: none; }
+html[data-aurora="full"] .ab { opacity: 1; }
+html[data-aurora="soft"] .ab { opacity: 0.55; }
+.ab i { position: absolute; border-radius: 50%; will-change: transform; background: radial-gradient(circle, var(--c) 0%, transparent 68%); }
+.ab i:nth-child(1) { --c: color-mix(in srgb, var(--ab-accent) 38%, transparent); width: 62vmax; height: 62vmax; right: -16vmax; top: -22vmax; animation: ab-a 26s ease-in-out infinite alternate; }
+.ab i:nth-child(2) { --c: color-mix(in srgb, color-mix(in srgb, var(--ab-accent) 40%, #7b2cbf) 36%, transparent); width: 56vmax; height: 56vmax; left: -20vmax; top: 6vmax; animation: ab-b 32s ease-in-out infinite alternate; }
+.ab i:nth-child(3) { --c: color-mix(in srgb, color-mix(in srgb, var(--ab-accent) 45%, #f59e0b) 34%, transparent); width: 52vmax; height: 52vmax; left: 22vmax; bottom: -26vmax; animation: ab-c 36s ease-in-out infinite alternate; }
+.ab i:nth-child(4) { --c: color-mix(in srgb, var(--ab-accent) 22%, transparent); width: 34vmax; height: 34vmax; right: 18vmax; bottom: 4vmax; animation: ab-d 30s ease-in-out infinite alternate; }
+@keyframes ab-a { to { transform: translate3d(-6vmax, 8vmax, 0) scale(1.12); } }
+@keyframes ab-b { to { transform: translate3d(9vmax, -4vmax, 0) scale(1.08); } }
+@keyframes ab-c { to { transform: translate3d(-8vmax, -6vmax, 0) scale(1.14); } }
+@keyframes ab-d { to { transform: translate3d(-5vmax, 6vmax, 0) scale(0.9); } }
+
+/* Let the backdrop show through the few page wrappers that paint a solid background (utility pages and analyse only). */
+html[data-aurora] { background: var(--workspace-paper, #f4f1ec); }
+html[data-aurora] body { background: transparent !important; }
+html[data-aurora] body .center-page,
+html[data-aurora] body .sparrow-global-page.analyse-page { background: transparent !important; }
+
+/* Login, signup and pricing already have orbs (AuthScene). Same pink / purple / peach palette, plus a third orb. */
+html body .fx-orb-b { background: radial-gradient(circle, color-mix(in srgb, color-mix(in srgb, var(--fx-accent, var(--sparrow-orange, #d03e7c)) 40%, #7b2cbf) 36%, transparent), transparent 68%); }
+html body .fx-orb-c { width: 420px; left: 34%; bottom: -16%; animation-delay: -9s;
+  background: radial-gradient(circle, color-mix(in srgb, color-mix(in srgb, var(--fx-accent, var(--sparrow-orange, #d03e7c)) 45%, #f59e0b) 34%, transparent), transparent 68%); }
+
+@media (max-width: 700px) { .ab i:nth-child(4) { display: none; } .ab i { will-change: auto; } }
+@media (prefers-reduced-motion: reduce) { .ab i, html body .fx-orb-c { animation: none; } }

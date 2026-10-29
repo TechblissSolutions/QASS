@@ -390,11 +390,11 @@ export default function CreateTools() {
   const studioHref = s.projectId ? `/studio?project=${encodeURIComponent(s.projectId)}` : '/dashboard';
 
   if (!authChecked || !ready) {
-    return <div className={`company-workspace ${styles.page}${hasCompany ? '' : ' workspace-personal'}`}><CompanyHeader /><main className={styles.main}><div className={styles.statusLine}><span className={styles.spinner} />Preparing your workspace...</div></main></div>;
+    return <div className={`company-workspace ${hasCompany ? 'reference-app ' : ''}${styles.page}${hasCompany ? '' : ' workspace-personal'}`}><CompanyHeader /><main className={styles.main}><div className={styles.statusLine}><span className={styles.spinner} />Preparing your workspace...</div></main></div>;
   }
 
   return (
-    <div className={`company-workspace ${styles.page}${hasCompany ? '' : ' workspace-personal'}`}>
+    <div className={`company-workspace ${hasCompany ? 'reference-app ' : ''}${styles.page}${hasCompany ? '' : ' workspace-personal'}`}>
       <CompanyHeader />
       {!hasCompany && <header className={styles.header}>
         <Link className={styles.brand} href="/dashboard">Sparrow by TechBliss</Link>

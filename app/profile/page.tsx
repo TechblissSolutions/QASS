@@ -197,7 +197,7 @@ function ProfileContent(){
       <section className="profile-section">
         <div className="profile-section-head"><div><span>MY COMPANIES</span><h2>Your company workspaces</h2></div><small>{projects.length} {projects.length===1?'company':'companies'}</small></div>
         {projects.length===0?<div className="profile-empty"><strong>No companies yet</strong><span>Add a company from your workspace to get started.</span><button className="btn btn-primary" onClick={()=>router.push('/analyse?new=1')}>＋ Add company</button></div>:<div className="profile-company-grid">
-          {projects.map(project=>{const theme=(project.brand_theme||{}) as any;const active=selectedProject?.id===project.id;const name=companyName(project);const cardStyle={'--client-primary':color(theme.primary_color,'#f97316'),'--client-secondary':color(theme.secondary_color,color(theme.primary_color,'#f97316')),'--client-background':color(theme.background_color,'#ffffff'),'--client-text':color(theme.text_color,'#111827'),'--client-muted':color(theme.text_color,'#64748b'),'--client-line':`color-mix(in srgb, ${color(theme.text_color,'#111827')} 18%, ${color(theme.background_color,'#ffffff')})`,'--client-soft':`color-mix(in srgb, ${color(theme.primary_color,'#f97316')} 8%, ${color(theme.background_color,'#ffffff')})`} as React.CSSProperties;return <button key={project.id} style={cardStyle} className={`profile-company-card ${active?'active':''}`} onClick={()=>chooseCompany(project.id)}><span className="profile-company-logo">{theme.logo_url?<SmartLogo src={'/api/brand-logo?src='+encodeURIComponent(String(theme.logo_url))} alt="" fallback={companyInitials(name)}/>:<b>{companyInitials(name)}</b>}</span><span className="profile-company-copy"><strong>{name}</strong><small>{project.url}</small></span><span className="profile-company-arrow">{active?'Selected':'View →'}</span></button>})}
+          {projects.map(project=>{const theme=(project.brand_theme||{}) as any;const active=selectedProject?.id===project.id;const name=companyName(project);const cardStyle={'--client-primary':color(theme.primary_color,'#d03e7c'),'--client-secondary':color(theme.secondary_color,color(theme.primary_color,'#d03e7c')),'--client-background':color(theme.background_color,'#ffffff'),'--client-text':color(theme.text_color,'#111827'),'--client-muted':color(theme.text_color,'#64748b'),'--client-line':`color-mix(in srgb, ${color(theme.text_color,'#111827')} 18%, ${color(theme.background_color,'#ffffff')})`,'--client-soft':`color-mix(in srgb, ${color(theme.primary_color,'#d03e7c')} 8%, ${color(theme.background_color,'#ffffff')})`} as React.CSSProperties;return <button key={project.id} style={cardStyle} className={`profile-company-card ${active?'active':''}`} onClick={()=>chooseCompany(project.id)}><span className="profile-company-logo">{theme.logo_url?<SmartLogo src={'/api/brand-logo?src='+encodeURIComponent(String(theme.logo_url))} alt="" fallback={companyInitials(name)}/>:<b>{companyInitials(name)}</b>}</span><span className="profile-company-copy"><strong>{name}</strong><small>{project.url}</small></span><span className="profile-company-arrow">{active?'Selected':'View →'}</span></button>})}
         </div>}
       </section>
 
@@ -206,16 +206,16 @@ function ProfileContent(){
 <section
   className="profile-company-detail"
   style={{
-    '--client-primary': color(selectedTheme.primary_color, '#f97316'),
+    '--client-primary': color(selectedTheme.primary_color, '#d03e7c'),
     '--client-secondary': color(
       selectedTheme.secondary_color,
-      color(selectedTheme.primary_color, '#f97316')
+      color(selectedTheme.primary_color, '#d03e7c')
     ),
     '--client-background': color(selectedTheme.background_color, '#ffffff'),
     '--client-text': color(selectedTheme.text_color, '#111827'),
     '--client-muted': color(selectedTheme.text_color, '#64748b'),
     '--client-line': `color-mix(in srgb, ${color(selectedTheme.text_color, '#111827')} 18%, ${color(selectedTheme.background_color, '#ffffff')})`,
-    '--client-soft': `color-mix(in srgb, ${color(selectedTheme.primary_color, '#f97316')} 8%, ${color(selectedTheme.background_color, '#ffffff')})`,
+    '--client-soft': `color-mix(in srgb, ${color(selectedTheme.primary_color, '#d03e7c')} 8%, ${color(selectedTheme.background_color, '#ffffff')})`,
   } as React.CSSProperties}
 >
   <div className="profile-detail-heading">

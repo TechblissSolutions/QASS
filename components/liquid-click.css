@@ -1,0 +1,24 @@
+/* Liquid click · everything is prefixed .lq- so nothing else is affected. */
+.lq-layer { --lq-accent: var(--sparrow-orange, #d03e7c); position: fixed; z-index: 85; overflow: hidden; pointer-events: none; isolation: isolate; }
+
+/* the wave: two soft rings spreading from the tap point along the bar */
+.lq-wave { position: absolute; left: var(--x); top: var(--y); width: var(--d); height: var(--d); margin: calc(var(--d) / -2) 0 0 calc(var(--d) / -2);
+  border-radius: 50%; box-sizing: border-box; border: 2px solid color-mix(in srgb, var(--lq-accent) 42%, #fff);
+  background: radial-gradient(circle, transparent 54%, color-mix(in srgb, var(--lq-accent) 16%, transparent) 63%, transparent 72%);
+  transform: scale(0.02); opacity: 0.9; animation: lq-wave 0.9s cubic-bezier(0.2, 0.7, 0.25, 1) forwards; }
+.lq-wave-2 { animation-delay: 0.1s; border-width: 1.5px; opacity: 0.7; }
+@keyframes lq-wave { to { transform: scale(1); opacity: 0; } }
+
+/* the drop: tapped item stretches, squashes and settles (independent properties, so hover effects keep working) */
+@keyframes lq-pop {
+  0%   { scale: 1 1; }
+  22%  { scale: 1.14 0.86; }
+  48%  { scale: 0.94 1.09; }
+  74%  { scale: 1.03 0.98; }
+  100% { scale: 1 1; }
+}
+@keyframes lq-ico { 0%, 100% { translate: 0 0; } 30% { translate: 0 -3px; } 58% { translate: 0 1px; } }
+.lq-pop { animation: lq-pop 0.6s cubic-bezier(0.3, 1.5, 0.5, 1); }
+.lq-pop svg { animation: lq-ico 0.6s cubic-bezier(0.3, 1.5, 0.5, 1); }
+
+@media (prefers-reduced-motion: reduce) { .lq-layer { display: none; } .lq-pop, .lq-pop svg { animation: none; } }

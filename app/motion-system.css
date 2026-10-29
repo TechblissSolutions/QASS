@@ -9,7 +9,7 @@
 
 :root {
   --mx-ease: var(--motion-ease, cubic-bezier(0.23, 1, 0.32, 1));
-  --mx-accent: var(--client-primary, var(--workspace-accent, #f97316));
+  --mx-accent: var(--client-primary, var(--workspace-accent, #d03e7c));
 }
 
 /* 1) Entrances: depth-pop for generated content and panel lists, staggered */

@@ -1,0 +1,108 @@
+/* Light glass chrome: floating sidebar + header that match the landing and pricing pages.
+   Replaces the old charcoal/black bars. Colours, spacing and shape only; no markup or logic changes.
+   Loaded after float-header.css. Selectors start with "html body" so they beat the older
+   !important rules in premium.css without touching them. */
+:root {
+  --fh-gap: clamp(12px, 2vw, 24px);
+  --ch-accent: var(--sparrow-orange, #d03e7c);
+  --ch-ink: #1c1822;
+  --ch-mute: #655f6e;
+  --ch-glass: rgb(255 255 255 / 84%);
+  --ch-line: rgb(28 24 34 / 8%);
+  --ch-shadow: 0 14px 36px rgb(28 24 34 / 10%);
+  --ch-edge: min(12px, calc(var(--workspace-rail, 228px) * 0.1)); /* 12px normally, ~8px on the compact rail */
+}
+
+/* ── Headers: dashboard, analyse, profile, workspace ─────────────────────── */
+html body .dashboard-v6-header,
+html body .sparrow-account-header,
+html body .company-workspace .company-shell-header {
+  background: var(--ch-glass) !important; color: var(--ch-ink) !important;
+  border: 1px solid var(--ch-line) !important; box-shadow: var(--ch-shadow) !important;
+  -webkit-backdrop-filter: blur(10px) !important; backdrop-filter: blur(10px) !important;
+}
+html body .dashboard-v6-brand,
+html body .dashboard-v6-header button,
+html body .dashboard-v6-header .account-menu,
+html body .sparrow-account-header .sparrow-wordmark,
+html body .company-workspace .company-shell-header .company-shell-brand,
+html body .company-workspace .company-shell-header .company-shell-wordmark { color: var(--ch-ink) !important; }
+html body .sparrow-account-header .sparrow-mark { background: var(--ch-ink) !important; color: #fff !important; }
+html body .company-workspace .company-shell-header .company-shell-logo {
+  background: #fff !important; border: 1px solid rgb(28 24 34 / 10%) !important; box-shadow: 0 3px 10px rgb(28 24 34 / 8%) !important;
+}
+/* account button + avatar */
+html body .dashboard-v6-header .account-trigger,
+html body .sparrow-account-header .account-trigger,
+html body .company-workspace .company-shell-header .account-trigger {
+  background: rgb(28 24 34 / 5%) !important; color: var(--ch-ink) !important; border: 1px solid rgb(28 24 34 / 10%) !important; box-shadow: none !important;
+}
+html body .dashboard-v6-header .account-trigger:hover,
+html body .sparrow-account-header .account-trigger:hover,
+html body .company-workspace .company-shell-header .account-trigger:hover {
+  background: #fff !important; border-color: color-mix(in srgb, var(--ch-accent) 55%, transparent) !important;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--ch-accent) 16%, transparent) !important;
+}
+html body .dashboard-v6-header .account-avatar,
+html body .sparrow-account-header .account-avatar,
+html body .company-workspace .company-shell-header .account-avatar { background: var(--ch-accent) !important; color: #fff !important; }
+html body .company-workspace .company-shell-header .account-signin,
+html body .dashboard-v6-header .account-signin,
+html body .sparrow-account-header .account-signin { color: var(--ch-ink) !important; border-color: rgb(28 24 34 / 18%) !important; background: transparent !important; }
+
+/* ── Sidebar: floating glass panel, aligned with the header ──────────────── */
+html body .company-workspace .company-sidebar {
+  top: var(--ch-edge) !important; bottom: var(--ch-edge) !important; left: var(--ch-edge) !important; right: auto !important;
+  width: calc(var(--workspace-rail, 228px) - var(--ch-edge) * 2) !important; height: auto !important; min-height: 0 !important;
+  border-radius: 26px !important; background: var(--ch-glass) !important; color: var(--ch-ink) !important;
+  border: 1px solid var(--ch-line) !important; box-shadow: var(--ch-shadow) !important;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  animation: ch-side-in 0.6s cubic-bezier(0.23, 1, 0.32, 1) backwards;
+}
+@keyframes ch-side-in { from { opacity: 0; transform: translateX(-16px); } }
+html body .company-workspace .company-sidebar .company-sidebar-name { color: var(--ch-ink) !important; }
+/* the leaf mark, same as the landing and pricing logo */
+html body .company-workspace .company-sidebar .landing-mark { background: var(--ch-ink) !important; }
+html body .company-workspace .company-sidebar .landing-mark i { background: var(--ch-accent) !important; }
+
+html body .company-workspace .company-sidebar nav a,
+html body .company-workspace .company-sidebar nav a > strong { color: var(--ch-mute) !important; background: transparent !important; box-shadow: none !important; }
+html body .company-workspace .company-sidebar nav a:hover { color: var(--ch-ink) !important; background: rgb(28 24 34 / 5%) !important; }
+html body .company-workspace .company-sidebar nav a.active {
+  color: var(--ch-ink) !important; background: color-mix(in srgb, var(--ch-accent) 11%, #fff) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ch-accent) 28%, transparent) !important;
+}
+html body .company-workspace .company-sidebar nav a.active > strong { color: var(--ch-ink) !important; }
+html body .company-workspace .company-sidebar nav a.active::before { background: var(--ch-accent) !important; box-shadow: none !important; }
+html body .company-workspace .company-sidebar nav a .sidebar-nav-icon { color: inherit !important; background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
+html body .company-workspace .company-sidebar nav a:hover .sidebar-nav-icon { color: var(--ch-accent) !important; }
+html body .company-workspace .company-sidebar nav a.active .sidebar-nav-icon { color: var(--ch-accent) !important; background: #fff !important; border-color: color-mix(in srgb, var(--ch-accent) 30%, transparent) !important; }
+
+/* ── Header sits flush with the new sidebar edge ─────────────────────────── */
+html body .company-workspace .company-shell-header {
+  width: calc(100% - var(--workspace-rail, 228px) - var(--fh-gap)) !important;
+  margin: 14px var(--fh-gap) 0 var(--workspace-rail, 228px) !important;
+}
+
+/* ── Phones: the sidebar becomes a floating bottom bar ───────────────────── */
+@media (max-width: 760px) {
+  html body .company-workspace .company-sidebar {
+    top: auto !important; left: 12px !important; right: 12px !important; bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+    width: auto !important; height: 64px !important; border-radius: 22px !important; animation: none;
+  }
+  html body .company-workspace .company-shell-header { width: calc(100% - 24px) !important; margin: 10px 12px 0 !important; }
+}
+@media (prefers-reduced-motion: reduce) { html body .company-workspace .company-sidebar { animation: none; } }
+
+/* headers go solid once the page is scrolled (data-scrolled is set by ScrollChrome) */
+html body .dashboard-v6-header,
+html body .sparrow-account-header,
+html body .company-workspace .company-shell-header { transition: background-color 0.3s, box-shadow 0.3s, border-color 0.3s; }
+html[data-scrolled] body .dashboard-v6-header,
+html[data-scrolled] body .sparrow-account-header,
+html[data-scrolled] body .company-workspace .company-shell-header {
+  background: #fff !important; border-color: rgb(28 24 34 / 12%) !important; box-shadow: 0 14px 38px rgb(28 24 34 / 16%) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  html body .dashboard-v6-header, html body .sparrow-account-header, html body .company-workspace .company-shell-header { transition: none; }
+}

@@ -20,7 +20,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import * as THREE from 'three';
 
-const ORANGE = '#ff4b13';
+const ORANGE = '#d03e7c';
 const LIME = '#c8f169';
 const WHITE = '#ffffff';
 

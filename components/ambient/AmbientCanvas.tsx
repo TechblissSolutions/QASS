@@ -18,7 +18,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import * as THREE from 'three';
 
-const FALLBACK_ACCENT = '#f97316';
+const FALLBACK_ACCENT = '#d03e7c';
 const TAUPE = '#77716b';
 
 type Live = {

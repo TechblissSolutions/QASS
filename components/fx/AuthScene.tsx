@@ -8,6 +8,7 @@ export default function AuthScene() {
       <div className="fx-auth-layer fx-auth-layer-far">
         <i className="fx-orb fx-orb-a" />
         <i className="fx-orb fx-orb-b" />
+        <i className="fx-orb fx-orb-c" />
         <i className="fx-ring fx-ring-a" />
       </div>
       <div className="fx-auth-layer fx-auth-layer-near">

@@ -37,7 +37,7 @@ html[data-ambient="on"] .company-workspace {
   z-index: 60;
   height: 2px;
   pointer-events: none;
-  background: var(--client-primary, var(--workspace-accent, #f97316));
+  background: var(--client-primary, var(--workspace-accent, #d03e7c));
   transform: scaleX(0);
   transform-origin: 0 50%;
   animation: ambient-progress linear both;
@@ -121,5 +121,5 @@ html[data-ambient="on"] .company-workspace .company-history-page,
 html[data-ambient="on"] .company-workspace .company-sidebar ~ .page-container,
 html[data-ambient="on"] .company-workspace .company-sidebar ~ main {
   background-color: transparent !important;
-  background-image: radial-gradient(ellipse at 90% 0, rgb(249 115 22 / 5%), transparent 34%) !important;
+  background-image: radial-gradient(ellipse at 90% 0, rgb(208 62 124 / 5%), transparent 34%) !important;
 }

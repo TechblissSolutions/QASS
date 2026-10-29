@@ -15,7 +15,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import * as THREE from 'three';
 
-const ORANGE = '#f97316';
+const ORANGE = '#d03e7c';
 const CHARCOAL = '#24221f';
 const TAUPE = '#77716b';
 

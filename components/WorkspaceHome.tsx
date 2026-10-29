@@ -173,12 +173,12 @@ export default function WorkspaceHome() {
             const supabase = getSupabaseClient();
 
             if (supabase) {
-              void supabase
+                void Promise.resolve(supabase
                 .from('projects')
                 .update({
                   brand_theme: nextTheme,
                 })
-                .eq('id', project.id);
+                  .eq('id', project.id)).catch(() => undefined);
             }
 
             return null;
@@ -312,6 +312,7 @@ export default function WorkspaceHome() {
         </Link>
 
         <AccountMenu initialAccount={account} />
+
       </header>
 
       <main className="dashboard-v6-main">
@@ -393,7 +394,7 @@ export default function WorkspaceHome() {
 
                 const primary =
                   String(
-                    theme.primary_color || '#f97316'
+                    theme.primary_color || '#d03e7c'
                   ).trim();
 
                 const secondary =

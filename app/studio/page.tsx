@@ -1322,7 +1322,7 @@ const formatEditor = (command: string, value?: string) => {
 
 
 
-  return <div className="company-workspace"><CompanyHeader/>
+  return <div className="company-workspace reference-app"><CompanyHeader/>
 
   <BrandTheme/>
 

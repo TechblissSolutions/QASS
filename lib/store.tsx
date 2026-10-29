@@ -81,7 +81,7 @@ async function hydrateBrandTheme(project: ProjectRow): Promise<Record<string, un
   if (!fetched) return Object.keys(current).length ? current : null;
   const theme = mergeTheme(current, fetched);
   const supabase = getSupabaseClient();
-  if (supabase) void supabase.from('projects').update({ brand_theme: theme }).eq('id', project.id);
+  if (supabase) void Promise.resolve(supabase.from('projects').update({ brand_theme: theme }).eq('id', project.id)).catch(() => undefined);
   return theme;
 }
 
@@ -166,7 +166,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!ready || !s.projectId) return;
     const supabase = getSupabaseClient(); if (!supabase) return;
     const timer = setTimeout(() => {
-      void supabase.from('projects').update({ url: s.url, profile: s.profile, prefs: s.prefs, brand_theme: s.brandTheme }).eq('id', s.projectId!);
+      void Promise.resolve(supabase.from('projects').update({ url: s.url, profile: s.profile, prefs: s.prefs, brand_theme: s.brandTheme }).eq('id', s.projectId!)).catch(() => undefined);
     }, 350);
     return () => clearTimeout(timer);
   }, [ready, s.projectId, s.url, s.profile, s.prefs, s.brandTheme]);

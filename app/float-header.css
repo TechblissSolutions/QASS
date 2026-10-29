@@ -1,0 +1,42 @@
+/* Floating header for the screens that already have one (dashboard, analyse, profile, workspace).
+   Shape, spacing and depth only: every colour, button and menu stays exactly as it is today.
+   Loaded last, so it wins over the older header rules in globals/premium css. */
+:root { --fh-gap: clamp(12px, 2vw, 24px); }
+
+/* Dashboard */
+.dashboard-v6-header {
+  position: sticky !important; top: 14px; z-index: 60 !important;
+  margin: 14px var(--fh-gap) 0 !important; border-radius: 999px !important;
+  border: 1px solid rgb(255 255 255 / 10%) !important; box-shadow: 0 16px 40px rgb(24 20 16 / 24%) !important;
+}
+
+/* Analyse and Profile */
+.sparrow-account-header {
+  position: sticky !important; top: 14px; z-index: 60 !important;
+  margin: 14px var(--fh-gap) 0 !important; border-radius: 999px !important;
+  border: 1px solid rgb(255 255 255 / 10%) !important; box-shadow: 0 16px 40px rgb(24 20 16 / 24%) !important;
+}
+
+/* Workspace (Studio, Create, Schedule, History, Brand): sits to the right of the sidebar rail */
+.company-workspace .company-shell-header {
+  position: sticky !important; top: 14px; z-index: 60 !important;
+  width: calc(100% - var(--workspace-rail) - var(--fh-gap) * 2) !important;
+  margin: 14px var(--fh-gap) 0 calc(var(--workspace-rail) + var(--fh-gap)) !important;
+  border: 1px solid rgb(255 255 255 / 10%) !important; border-radius: 999px !important;
+  box-shadow: 0 16px 40px rgb(24 20 16 / 24%) !important;
+}
+.company-workspace .company-shell-inner-minimal { min-height: 60px; padding: 6px clamp(14px, 2.2vw, 28px); }
+
+/* Entrance: slides down once on load */
+@keyframes fh-in { from { opacity: 0; transform: translateY(-16px); } }
+.dashboard-v6-header, .sparrow-account-header, .company-workspace .company-shell-header { animation: fh-in 0.6s cubic-bezier(0.23, 1, 0.32, 1) backwards; }
+
+/* Phones: the sidebar becomes a bottom bar, so the header spans the full width */
+@media (max-width: 760px) {
+  .dashboard-v6-header, .sparrow-account-header { top: 10px; margin: 10px 12px 0 !important; }
+  .company-workspace .company-shell-header { top: 10px; width: calc(100% - 24px) !important; margin: 10px 12px 0 !important; }
+  .company-workspace .company-shell-inner-minimal { min-height: 54px; padding: 5px 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-v6-header, .sparrow-account-header, .company-workspace .company-shell-header { animation: none; }
+}
