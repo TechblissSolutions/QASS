@@ -1,6 +1,7 @@
 'use client';
 
 import './landing-hero.css';
+import '@/components/nav-active.css';
 import Link from 'next/link';
 import SignalRevealText from '@/components/SignalRevealText';
 import { useEffect, useRef, useState } from 'react';
@@ -26,6 +27,7 @@ const STEPS = [
 export default function LandingPage() {
   const [authed, setAuthed] = useState(false);
   const root = useRef<HTMLDivElement>(null);
+  const [spy, setSpy] = useState<'home' | 'how'>('home');
 
   // Signed-in visitors get a direct way back into the workspace
   useEffect(() => {
@@ -34,6 +36,20 @@ export default function LandingPage() {
       try { if (await getAccessToken() && alive) setAuthed(true); } catch { /* signed out */ }
     })();
     return () => { alive = false; };
+  }, []);
+
+  // Home or How it works, depending on how far down the page is, so the header tab for it lights up
+  useEffect(() => {
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const how = document.getElementById('how');
+      setSpy(how && how.getBoundingClientRect().top < window.innerHeight * 0.5 ? 'how' : 'home');
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update); };
+    update();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => { window.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf); };
   }, []);
 
   useEffect(() => {
@@ -101,8 +117,9 @@ export default function LandingPage() {
           <span>Sparrow <small>by TechBliss</small></span>
         </Link>
         <nav className="sp-links" aria-label="Main">
-          <a href="#how">How it works</a>
-          <a href="#channels">Channels</a>
+          <a href="#top" aria-current={spy === 'home' ? 'page' : undefined}
+            onClick={(e: React.MouseEvent) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Home</a>
+          <a href="#how" aria-current={spy === 'how' ? 'location' : undefined}>How it works</a>
           <Link href="/pricing">Pricing</Link>
         </nav>
         <div className="sp-nav-actions">

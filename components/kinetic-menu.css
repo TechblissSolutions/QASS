@@ -1,0 +1,59 @@
+/* Kinetic menu. Colours follow the app accent (--sparrow-orange, pink fallback); nothing outside .km-* is touched. */
+.km-trigger { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 6px 0 14px; border-radius: 999px; flex: none;
+  border: 1px solid color-mix(in srgb, currentColor 24%, transparent); background: transparent; color: inherit;
+  font: inherit; font-size: 14px; font-weight: 700; line-height: 1; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; }
+.km-trigger:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+.km-trigger:focus-visible { outline: 2px solid var(--sparrow-orange, #d03e7c); outline-offset: 2px; }
+.km-trigger-icon { width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--sparrow-orange, #d03e7c); color: #fff; }
+.km-trigger-icon svg { width: 12px; height: 12px; transform-origin: center; transform-box: fill-box; }
+
+.km-root { --km-accent: var(--sparrow-orange, #d03e7c); --km-ink: #1c1822; display: none; position: fixed; inset: 0; z-index: 2000; font-family: inherit; }
+.km-dim { position: absolute; inset: 0; background: rgb(28 24 34 / 45%); }
+.km-panel { position: absolute; top: 0; right: 0; bottom: 0; width: min(520px, 100%); overflow: hidden; color: var(--km-ink); }
+.km-bg, .km-layer { position: absolute; inset: 0; }
+.km-layer-1 { background: color-mix(in srgb, var(--km-accent) 24%, #fff); }
+.km-layer-2 { background: color-mix(in srgb, var(--km-accent) 10%, #fff); }
+.km-layer-3 { background: #fbf8f7; }
+
+.km-shapes { position: absolute; right: -50px; bottom: -50px; width: 360px; height: 360px; pointer-events: none; }
+.km-shape { position: absolute; inset: 0; width: 100%; height: 100%; visibility: hidden; }
+.km-shape.active { visibility: visible; }
+.km-el { opacity: 0; }
+.fa { fill: color-mix(in srgb, var(--km-accent) 20%, transparent); }
+.fb { fill: color-mix(in srgb, var(--km-accent) 14%, transparent); }
+.fc { fill: color-mix(in srgb, var(--km-accent) 9%, transparent); }
+.sa { stroke: color-mix(in srgb, var(--km-accent) 18%, transparent); }
+.sb { stroke: color-mix(in srgb, var(--km-accent) 12%, transparent); }
+
+.km-content { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; padding: 20px 28px 32px; }
+.km-top { display: flex; align-items: center; justify-content: space-between; min-height: 36px; }
+.km-brand { font-weight: 800; letter-spacing: -0.03em; }
+.km-brand small { font-weight: 600; font-size: 12px; letter-spacing: 0; color: #655f6e; }
+.km-close { color: var(--km-ink); }
+.km-list { list-style: none; margin: 0; padding: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.km-link { display: block; overflow: hidden; padding: 4px 0; font-size: clamp(34px, 7vw, 54px); font-weight: 800; letter-spacing: -0.04em; line-height: 1.12;
+  color: var(--km-ink); text-decoration: none; transition: color 0.2s; }
+.km-link:hover, .km-link:focus-visible, .km-link[aria-current='page'] { color: var(--km-accent); }
+.km-link:focus-visible { outline: none; }
+.km-link-inner { display: block; transform-origin: left bottom; will-change: transform; }
+.km-footer { margin: 0; font-size: 12px; color: #655f6e; }
+button.km-link { width: 100%; border: 0; background: none; text-align: left; font-family: inherit; cursor: pointer; }
+.km-footer { overflow-wrap: anywhere; }
+
+/* Left, smaller variant (used by the side-panel Profile button): floats like the side panel and takes its place */
+.km-panel.km-left { top: 12px; bottom: 12px; left: 12px; right: auto; width: min(340px, calc(100% - 24px)); border-radius: 26px; box-shadow: 0 20px 50px rgb(28 24 34 / 25%); }
+.km-compact .km-content { padding: 16px 22px 24px; }
+.km-compact .km-shapes { width: 280px; height: 280px; right: -40px; bottom: -40px; }
+.km-compact .km-brand { font-size: 15px; }
+.km-compact .km-brand small { font-size: 12px; }
+.km-compact .km-close { height: 34px; padding-left: 13px; font-size: 14px; }
+.km-compact .km-close .km-trigger-icon { width: 24px; height: 24px; }
+.km-compact .km-link { padding: 3px 0; font-size: clamp(26px, 2.6vw, 34px); }
+.km-compact .km-footer { font-size: 12px; }
+/* the side panel slides out while the profile panel opens, and back when it closes */
+@media (min-width: 761px) {
+  html body .company-workspace .company-sidebar { transition: transform 0.5s cubic-bezier(0.65, 0.01, 0.05, 0.99), opacity 0.35s ease; }
+  html body .company-workspace.km-side-open .company-sidebar { transform: translateX(calc(-100% - 24px)); opacity: 0; pointer-events: none; }
+}
+@media (prefers-reduced-motion: reduce) { html body .company-workspace .company-sidebar { transition-duration: 0.01s; } }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { clearAuthPersistence, getSupabaseClient } from '@/lib/supabase';
 import { getAccessToken } from '@/lib/auth';
+import KineticMenu from './KineticMenu';
 
 type Account = {
   user: { id: string; email?: string; fullName?: string | null };
@@ -29,14 +30,18 @@ export default function AccountMenu({
   compact = false,
   onAuthChange,
   initialAccount,
+  kinetic = false,
 }: {
   compact?: boolean;
   onAuthChange?: (signedIn: boolean | null) => void;
   initialAccount?: Account | null;
+  kinetic?: boolean;
 }) {
   const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const [kOpen, setKOpen] = useState(false);
+  useEffect(() => () => { document.querySelector('.company-workspace')?.classList.remove('km-side-open'); }, []);
   const [account, setAccount] = useState<Account | null>(initialAccount || null);
 
   useEffect(() => {
@@ -93,11 +98,12 @@ export default function AccountMenu({
   }
 
   return <div className={`account-menu ${compact ? 'compact' : ''}`} ref={ref}>
-    <button type="button" className="account-trigger" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-haspopup="menu">
+    <button type="button" className="account-trigger" onClick={() => kinetic ? setKOpen(true) : setOpen(v => !v)} aria-expanded={kinetic ? kOpen : open} aria-haspopup={kinetic ? 'dialog' : 'menu'}>
       <span className="account-avatar">{initials(account)}</span>
       {!compact && <span className="account-trigger-name">{displayName(account)}</span>}
       <span className="account-chevron">⌄</span>
     </button>
+    {kinetic && <KineticMenu trigger={false} side="left" compact open={kOpen} onOpenChange={(v) => { setKOpen(v); document.querySelector('.company-workspace')?.classList.toggle('km-side-open', v); }} footer={`${displayName(account)} · ${account?.user.email || ''}`} links={[...(plan === 'owner' ? [{ label: 'Admin console', href: '/admin' }] : []), { label: 'Profile', href: '/profile' }, { label: 'All companies', href: '/dashboard' }, { label: 'Add company', href: '/analyse?new=1' }, { label: 'Plans & billing', href: '/pricing' }, { label: 'Sign out', onClick: () => { void signOut(); } }]} />}
     {open && <div className="account-popover" role="menu">
       <div className="account-popover-head">
         <span className="account-avatar account-avatar-large">{initials(account)}</span>

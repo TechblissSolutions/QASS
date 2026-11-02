@@ -1,6 +1,8 @@
 'use client';
 
 import './site-nav.css';
+import '@/components/nav-active.css';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { getAccessToken } from '@/lib/auth';
@@ -11,6 +13,7 @@ import { getAccessToken } from '@/lib/auth';
  */
 export default function SiteNav({ current }: { current?: 'login' | 'signup' }) {
   const [authed, setAuthed] = useState(false);
+  const path = usePathname() || '';
 
   useEffect(() => {
     let alive = true;
@@ -32,8 +35,8 @@ export default function SiteNav({ current }: { current?: 'login' | 'signup' }) {
         <span>Sparrow <small>by TechBliss</small></span>
       </Link>
       <nav className="sn-links" aria-label="Main">
-        <Link href="/">Home</Link>
-        <Link href="/pricing">Pricing</Link>
+        <Link href="/" aria-current={path === '/' ? 'page' : undefined}>Home</Link>
+        <Link href="/pricing" aria-current={path === '/pricing' ? 'page' : undefined}>Pricing</Link>
       </nav>
       <div className="sn-actions">
         <button type="button" className="sn-back" onClick={goBack}>← Back</button>

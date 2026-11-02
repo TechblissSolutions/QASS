@@ -4,6 +4,22 @@ import { getUserFromToken } from '@/lib/supabase';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { isOwnerEmail, isOwnerUserId } from '@/lib/entitlements';
 
+function isMissingOptionalTable(error: { code?: string; message?: string } | null, table: string) {
+  if (!error) return false;
+  const message = String(error.message || '').toLowerCase();
+  const tableName = table.toLowerCase();
+  const referencesTable = message.includes(tableName) || message.includes(`public.${tableName}`);
+
+  // PostgREST uses PGRST205 when a table is absent from its schema cache; Postgres
+  // uses 42P01 when the relation itself does not exist.
+  return referencesTable && (
+    error.code === 'PGRST205' ||
+    error.code === '42P01' ||
+    message.includes('does not exist') ||
+    message.includes('could not find the table')
+  );
+}
+
 export async function requireAdmin(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
   if (!token) return { response: NextResponse.json({ error: 'Authentication required.' }, { status: 401 }) } as const;
@@ -39,7 +55,7 @@ export async function checkFeatureGate(req: NextRequest, key: string) {
   try {
     const adminClient = getSupabaseAdmin();
     const { data: override, error: overrideError } = await adminClient.from('admin_user_feature_overrides').select('enabled').eq('user_id', user.id).eq('feature_key', key).maybeSingle();
-    if (overrideError && !String(overrideError.message || '').toLowerCase().includes('does not exist')) return NextResponse.json({ error: 'User feature controls are temporarily unavailable.' }, { status: 503 });
+    if (overrideError && !isMissingOptionalTable(overrideError, 'admin_user_feature_overrides')) return NextResponse.json({ error: 'User feature controls are temporarily unavailable.' }, { status: 503 });
     const { data, error } = await adminClient.from('admin_feature_flags').select('enabled').eq('key', key).maybeSingle();
     if (error) return NextResponse.json({ error: 'Feature controls are temporarily unavailable.' }, { status: 503 });
     // A platform-wide kill switch always wins. Per-user overrides only refine an enabled platform feature.

@@ -1,0 +1,17 @@
+/* Active tab for the floating header links (landing, pricing, login/signup and utility pages).
+   Marked by aria-current, which the pages set; pressed tabs show the same look instantly. */
+.sp-nav .sp-links, .pz-nav .pz-links, .sn .sn-links { gap: 4px; }
+.sp-nav .sp-links a, .pz-nav .pz-links a, .sn .sn-links a {
+  position: relative; padding: 8px 15px; border-radius: 999px;
+  transition: color 0.2s, background-color 0.25s, box-shadow 0.25s;
+}
+:is(.sp-nav .sp-links, .pz-nav .pz-links, .sn .sn-links) a:hover:not([aria-current]) { background: rgb(28 24 34 / 5%); color: #1c1822; }
+:is(.sp-nav .sp-links, .pz-nav .pz-links, .sn .sn-links) a[aria-current],
+:is(.sp-nav .sp-links, .pz-nav .pz-links, .sn .sn-links) a:active {
+  color: #1c1822;
+  background: color-mix(in srgb, var(--sparrow-orange, #d03e7c) 11%, #fff);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sparrow-orange, #d03e7c) 28%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sp-nav .sp-links a, .pz-nav .pz-links a, .sn .sn-links a { transition: none; }
+}

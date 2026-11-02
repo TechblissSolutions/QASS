@@ -70,7 +70,7 @@ export default function CompanyHeader() {
       <nav>
         {nav.map(([label, route]) => <Link key={label} className={active(route) ? 'active' : ''} href={route.startsWith('/dashboard/project') ? route : href(route)}><span className="sidebar-nav-icon">{label === 'Studio' ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.7 6.3L20 11l-6.3 1.7L12 19l-1.7-6.3L4 11l6.3-1.7L12 3Z" /></svg> : label === 'Create' ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5h8l4 4v11H6z" /><path d="M14 4.5v4h4M9 14h6M9 17h4" /></svg> : label === 'Schedule' ? <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M7 3.5v4M17 3.5v4M3.5 9.5h17" /></svg> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7.5a7 7 0 1 1-1.1 8.1" /><path d="M7 3.5v4h4" /><path d="M17 16.5v4h-4" /></svg>}</span><strong>{label}</strong></Link>)}
       </nav>
-      {referenceLayout && <div className="company-sidebar-profile"><span>PROFILE</span><AccountMenu /></div>}
+      {referenceLayout && <div className="company-sidebar-profile"><span>PROFILE</span><AccountMenu kinetic /></div>}
     </aside>
   </>;
 

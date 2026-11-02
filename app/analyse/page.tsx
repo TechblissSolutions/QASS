@@ -9,6 +9,7 @@ import { parseForm2Html } from '@/lib/parser';
 import { normaliseUrl } from '@/lib/utils';
 import StoreLoading from '@/components/StoreLoading';
 import AccountMenu from '@/components/AccountMenu';
+import KineticMenu from '@/components/KineticMenu';
 import './analyse-motion.css';
 
 // Original CSS indicator, used while the 3D scene loads or when WebGL is unavailable
@@ -374,7 +375,10 @@ function AnalysePage() {
             </nav>
           )}
         </div>
-        <AccountMenu compact onAuthChange={setSignedIn} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <KineticMenu links={signedIn ? [{ label: 'All companies', href: '/dashboard' }, { label: 'Add company', href: '/analyse?new=1' }, { label: 'Create tools', href: '/create' }, { label: 'Profile', href: '/profile' }] : [{ label: 'Home', href: '/' }, { label: 'Pricing', href: '/pricing' }, { label: 'Sign in', href: '/login' }]} />
+          <AccountMenu compact onAuthChange={setSignedIn} />
+        </div>
       </header>
     );
   }

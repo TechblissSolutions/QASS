@@ -1,0 +1,27 @@
+/* Collapsible left panel for the company pages (Studio, Create, Schedule, History, Brand). Phones keep their bottom bar. */
+.rail-toggle { display: none; }
+@media (min-width: 761px) {
+  .rail-toggle { position: fixed; z-index: 95; top: 96px; left: calc(var(--workspace-rail, 228px) - 26px); width: 28px; height: 28px; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer;
+    border: 1px solid rgb(28 24 34 / 14%); background: #fff; color: #1c1822; box-shadow: 0 6px 16px rgb(28 24 34 / 14%);
+    transition: left 0.5s cubic-bezier(0.65, 0.01, 0.05, 0.99), background-color 0.2s, color 0.2s; }
+  .rail-toggle:hover { background: var(--sparrow-orange, #d03e7c); color: #fff; border-color: transparent; }
+  .rail-toggle:focus-visible { outline: 2px solid var(--sparrow-orange, #d03e7c); outline-offset: 2px; }
+  .rail-toggle svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.5s cubic-bezier(0.65, 0.01, 0.05, 0.99); }
+
+  html body .company-workspace .company-sidebar { transition: transform 0.5s cubic-bezier(0.65, 0.01, 0.05, 0.99), opacity 0.35s ease; }
+  html body .company-workspace .company-shell-header { transition: margin-left 0.5s cubic-bezier(0.65, 0.01, 0.05, 0.99), width 0.5s cubic-bezier(0.65, 0.01, 0.05, 0.99); }
+  html body .company-workspace > :not(.company-sidebar):not(.company-shell-header):not(.rail-toggle):not(style) { transition: margin-left 0.5s cubic-bezier(0.65, 0.01, 0.05, 0.99), width 0.5s cubic-bezier(0.65, 0.01, 0.05, 0.99); }
+
+  /* collapsed: panel slides out, the page takes its space, the handle waits at the left edge */
+  html body .company-workspace.rail-collapsed { --workspace-rail: 0px; }
+  html body .company-workspace.rail-collapsed .company-sidebar { width: var(--rail-w, 204px) !important; transform: translateX(calc(-100% - 24px)); opacity: 0; visibility: hidden; pointer-events: none;
+    transition: transform 0.5s cubic-bezier(0.65, 0.01, 0.05, 0.99), opacity 0.35s ease, visibility 0s linear 0.5s; }
+  html body .company-workspace.rail-collapsed .rail-toggle { left: 10px; }
+  html body .company-workspace.rail-collapsed .rail-toggle svg { transform: rotate(180deg); }
+
+  html body .company-workspace.rail-instant, html body .company-workspace.rail-instant * { transition: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html body .company-workspace .company-sidebar, html body .company-workspace .company-shell-header, .rail-toggle, .rail-toggle svg { transition-duration: 0.01s !important; }
+}

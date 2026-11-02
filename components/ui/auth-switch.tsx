@@ -3,6 +3,7 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseClient, setAuthPersistence } from "@/lib/supabase";
+import TunnelLoader from "@/components/TunnelLoader";
 
 type Mode = "signin" | "signup";
 
@@ -69,6 +70,7 @@ export default function AuthSwitch({ initialMode = "signin" }: { initialMode?: M
   const router = useRouter();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [busy, setBusy] = useState(false);
+  const [entering, setEntering] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
@@ -122,7 +124,7 @@ export default function AuthSwitch({ initialMode = "signin" }: { initialMode?: M
           body: JSON.stringify({ deviceId }),
         }).catch(() => undefined);
       }
-      router.push(getDestination());
+      setEntering(true); router.push(getDestination());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to sign in.");
     } finally {
@@ -177,7 +179,7 @@ export default function AuthSwitch({ initialMode = "signin" }: { initialMode?: M
       });
       if (error) throw error;
       if (data.session) {
-        router.push(getDestination());
+        setEntering(true); router.push(getDestination());
       } else {
         setAwaitingOtp(true);
         setNotice("We sent a verification code to your email. Enter the code to verify your account.");
@@ -204,7 +206,7 @@ export default function AuthSwitch({ initialMode = "signin" }: { initialMode?: M
       const { data, error } = await supabase.auth.verifyOtp({ email: suEmail.trim(), token: otp.trim(), type: "signup" });
       if (error) throw error;
       if (!data.session) throw new Error("Email verified, but no session was created. Please sign in.");
-      router.push(getDestination());
+      setEntering(true); router.push(getDestination());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to verify your email.");
     } finally {
@@ -246,6 +248,7 @@ export default function AuthSwitch({ initialMode = "signin" }: { initialMode?: M
   return (
     <div className="auth-switch">
       <style>{AUTH_SWITCH_CSS}</style>
+      {entering && <TunnelLoader title={isSignUp ? "Setting up your account" : "Signing you in"} delay={0} />}
 
       <div className={isSignUp ? "as-card is-signup" : "as-card"}>
         <div className="as-sweep" aria-hidden="true"><i /><i /><i /></div>

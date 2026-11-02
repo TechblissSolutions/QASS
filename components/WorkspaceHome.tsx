@@ -21,12 +21,17 @@ import { useStore } from '@/lib/store';
 import AccountMenu from './AccountMenu';
 import Modal from './Modal';
 import SmartLogo from './SmartLogo';
-import createToolsStyles from './CreateTools.module.css';
+import TunnelLoader, { useTunnelPhase } from './TunnelLoader';
 import {
   fetchBrandAppearance,
   brandThemeComplete,
   mergeTheme,
 } from '@/lib/brand-client';
+
+// How long the tunnel plays, at minimum, every time the dashboard opens (ms).
+// Set TUNNEL_INTRO_ONCE to true to play the full intro only once per browser tab session.
+const TUNNEL_MIN_MS = 1800;
+const TUNNEL_INTRO_ONCE = false;
 
 type Account = {
   user: {
@@ -283,18 +288,26 @@ export default function WorkspaceHome() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="dashboard-v6-loading">
-        <div className="dashboard-v6-spinner" />
-        <strong>Loading your companies</strong>
-        <span>Preparing your workspace…</span>
-      </div>
-    );
+  // The tunnel plays for at least TUNNEL_MIN_MS however fast the data arrives, then the
+  // camera pushes through it while the dashboard appears underneath.
+  const [tunnelMs] = useState(() => {
+    if (!TUNNEL_INTRO_ONCE || typeof window === 'undefined') return TUNNEL_MIN_MS;
+    try { return window.sessionStorage.getItem('sparrow-tunnel-seen') ? 0 : TUNNEL_MIN_MS; } catch { return TUNNEL_MIN_MS; }
+  });
+  useEffect(() => {
+    if (!TUNNEL_INTRO_ONCE) return;
+    try { window.sessionStorage.setItem('sparrow-tunnel-seen', '1'); } catch { /* ignore */ }
+  }, []);
+  const phase = useTunnelPhase(loading, tunnelMs);
+
+  if (phase === 'loading') {
+    return <>{<TunnelLoader title="Loading your companies" delay={0} />}</>;
   }
 
   return (
-    <div className="dashboard-v6">
+    <>
+    {phase === 'leaving' && <TunnelLoader title="Loading your companies" delay={0} leaving />}
+    <div className="dashboard-v6 tl-emerge">
       <header className="dashboard-v6-header">
         <a
           href="/"
@@ -307,11 +320,7 @@ export default function WorkspaceHome() {
           YOUR WORKSPACE
         </div>
 
-        <Link className={createToolsStyles.workspaceCreateLink} href="/create">
-          Create tools
-        </Link>
-
-        <AccountMenu initialAccount={account} />
+<AccountMenu initialAccount={account} />
 
       </header>
 
@@ -569,5 +578,6 @@ export default function WorkspaceHome() {
         </div>
       </Modal>
     </div>
+    </>
   );
 }

@@ -9,6 +9,7 @@ import { companyNameFromUrl } from '@/lib/utils';
 import CompanyHeader from '@/components/CompanyHeader';
 import BrandTheme from '@/components/BrandTheme';
 import { useStore } from '@/lib/store';
+import TunnelLoader from '@/components/TunnelLoader';
 
 export default function ProjectHistory({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -73,7 +74,7 @@ export default function ProjectHistory({ params }: { params: Promise<{ id: strin
     return currentPieces().map(piece => ({ piece, job: fallbackJob }));
   }, [jobs, s.projectId, s.jobId, s.jobRowId, s.generationStatus, s.jobStarted, s.finishedAt, s.generationRequestId, s.liveViewToken, s.sections, s.schedule, s.prefs.platforms, currentPieces, id]);
 
-  if (loading) return <div className="company-history-loading"><div className="dashboard-v6-spinner" /><strong>Loading history</strong></div>;
+  if (loading) return <TunnelLoader title="Loading history" />;
   if (!project) return <div className="center-page"><div className="work-card"><h2>{error || 'Company not found.'}</h2><a className="btn btn-primary" href="/dashboard">Back to companies</a></div></div>;
 
   return <div className="company-workspace reference-app">

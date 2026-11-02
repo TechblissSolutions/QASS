@@ -10,6 +10,7 @@ import { companyInitials, companyNameFromUrl } from '@/lib/utils';
 import { fetchBrandAppearance } from '@/lib/brand-client';
 import SmartLogo from '@/components/SmartLogo';
 import AccountMenu from '@/components/AccountMenu';
+import KineticMenu from '@/components/KineticMenu';
 import StoreLoading from '@/components/StoreLoading';
 import { useToast } from '@/components/Toast';
 
@@ -183,7 +184,7 @@ function ProfileContent(){
   if(!ready||loading)return <StoreLoading/>;
 
   return <div className="sparrow-account-shell">
-    <header className="sparrow-account-header"><div className="sparrow-header-left"><button className="sparrow-wordmark" onClick={()=>router.push('/dashboard')} aria-label="Back to Sparrow by TechBliss"><span className="sparrow-mark">S</span><span>Sparrow by TechBliss</span></button><nav className="sparrow-global-nav"><button onClick={()=>router.push('/dashboard')}>All companies</button><button onClick={()=>router.push('/analyse?new=1')}>＋ Add company</button></nav></div><AccountMenu compact /></header>
+    <header className="sparrow-account-header"><div className="sparrow-header-left"><button className="sparrow-wordmark" onClick={()=>router.push('/dashboard')} aria-label="Back to Sparrow by TechBliss"><span className="sparrow-mark">S</span><span>Sparrow by TechBliss</span></button><nav className="sparrow-global-nav"><button onClick={()=>router.push('/dashboard')}>All companies</button><button onClick={()=>router.push('/analyse?new=1')}>＋ Add company</button></nav></div><div style={{display:'flex',alignItems:'center',gap:10}}><KineticMenu links={[{label:'All companies',href:'/dashboard'},{label:'Add company',href:'/analyse?new=1'},{label:'Create tools',href:'/create'},{label:'Profile',href:'/profile'}]} /><AccountMenu compact /></div></header>
     <main className="page-container profile-page">
       <section className="profile-hero">
         <div>
