@@ -219,11 +219,12 @@ export default function AuthSwitch({ initialMode = "signin" }: { initialMode?: M
     setError("");
     setBusy(true);
     try {
+      setAuthPersistence(rememberMe);
       const supabase = getSupabaseClient();
       if (!supabase) throw new Error("Authentication is not configured.");
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: `${window.location.origin}${getDestination()}` },
+        options: { redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(getDestination())}` },
       });
       if (error) throw error;
     } catch (err) {

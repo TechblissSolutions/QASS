@@ -2,7 +2,8 @@
 
 /**
  * Types its text out character by character, but ONLY when the card appears while a
- * generation is in progress (the Studio generation strip is on screen). Older content,
+ * generation is in progress (the Studio generation strip is on screen), or when `force` is set
+ * by a page that knows the text is brand new (the free trial preview). Older content,
  * page loads and reduced-motion users always see the full text straight away.
  * Layout never jumps: the not-yet-typed remainder is rendered invisibly.
  */
@@ -11,11 +12,11 @@ import { useEffect, useLayoutEffect, useState } from 'react';
 
 const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
-export default function TypeText({ text, cps = 90 }: { text: string; cps?: number }) {
+export default function TypeText({ text, cps = 90, force = false }: { text: string; cps?: number; force?: boolean }) {
   const [n, setN] = useState(text.length);
 
   useIsoLayoutEffect(() => {
-    const generating = !!document.querySelector('.studio-generation-strip');
+    const generating = force || !!document.querySelector('.studio-generation-strip');
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!generating || reduced || !text) return;
     setN(0);

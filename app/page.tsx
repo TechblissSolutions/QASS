@@ -121,6 +121,7 @@ export default function LandingPage() {
             onClick={(e: React.MouseEvent) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Home</a>
           <a href="#how" aria-current={spy === 'how' ? 'location' : undefined}>How it works</a>
           <Link href="/pricing">Pricing</Link>
+          <Link href="/free-trial">Free trial</Link>
         </nav>
         <div className="sp-nav-actions">
           {!authed && <Link href="/login" className="sp-ghost">Sign in</Link>}

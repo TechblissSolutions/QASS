@@ -57,7 +57,9 @@ test('carousel submits each indexed image request and renders returned results',
   fireEvent.change(screen.getByLabelText('Carousel slides'), { target: { value: '2' } });
   fireEvent.click(screen.getByRole('button', { name: 'Generate image' }));
 
-  expect(await screen.findAllByRole('img', { name: /image carousel result/ })).toHaveLength(2);
+  await waitFor(() => {
+    expect(screen.getAllByRole('img', { name: /image carousel result/ })).toHaveLength(2);
+  });
   expect(requests).toHaveLength(2);
   expect(requests[0]).toMatchObject({ media_type: 'image', media_action: 'image_carousel', variation_index: 1, variation_count: 2 });
   expect(requests[1]).toMatchObject({ media_type: 'image', media_action: 'image_carousel', variation_index: 2, variation_count: 2 });

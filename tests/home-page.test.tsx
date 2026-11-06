@@ -1,61 +1,63 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import HomePage from '@/app/page';
 
-const mockSet = jest.fn();
-const mockPush = jest.fn();
-
-jest.mock('@/lib/store', () => ({
-  useStore: () => ({ s: { url: '' }, set: mockSet, ready: true }),
-}));
-jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mockPush }),
+jest.mock('@/lib/auth', () => ({
+  getAccessToken: jest.fn(async () => null),
 }));
 
-test('announces invalid website input and associates the error with the field', () => {
+test('shows the current primary navigation and brand home link', () => {
   render(<HomePage />);
-  const website = screen.getByRole('textbox', { name: 'Company website' });
 
-  fireEvent.click(screen.getByRole('button', { name: /Analyze website/ }));
+  expect(screen.getByRole('link', { name: 'Sparrow by TechBliss home' })).toHaveAttribute('href', '/');
 
-  expect(screen.getByRole('alert')).toHaveTextContent('Enter a valid website');
-  expect(website).toHaveAttribute('aria-invalid', 'true');
-  expect(website).toHaveAttribute('aria-describedby', 'company-website-error');
-  expect(mockSet).not.toHaveBeenCalled();
-  expect(mockPush).not.toHaveBeenCalled();
+  const navigation = screen.getByRole('navigation', { name: 'Main' });
+  expect(within(navigation).getByRole('link', { name: 'Home' })).toHaveAttribute('href', '#top');
+  expect(within(navigation).getByRole('link', { name: 'How it works' })).toHaveAttribute('href', '#how');
+  expect(within(navigation).getByRole('link', { name: 'Pricing' })).toHaveAttribute('href', '/pricing');
+  expect(within(navigation).getByRole('link', { name: 'Free trial' })).toHaveAttribute('href', '/free-trial');
+  const signInLinks = screen.getAllByRole('link', { name: 'Sign in' });
+  expect(signInLinks).toHaveLength(2);
+  expect(signInLinks.every(link => link.getAttribute('href') === '/login')).toBe(true);
 });
 
-test('normalizes a valid website and continues to analysis', () => {
-  render(<HomePage />);
-  fireEvent.change(screen.getByRole('textbox', { name: 'Company website' }), {
-    target: { value: 'example.com' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: /Analyze website/ }));
-
-  expect(mockSet).toHaveBeenCalledWith({ url: 'https://example.com' });
-  expect(mockPush).toHaveBeenCalledWith('/analyse?new=1&url=https%3A%2F%2Fexample.com');
-});
-
-test('explains the website-to-content workflow in plain language', () => {
+test('presents the current hero message and calls to action', () => {
   render(<HomePage />);
 
-  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-    /Create on-brand content from a company website\./i,
-  );
-  expect(screen.getByRole('heading', { name: 'Analyze a company website' })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Create marketing content' })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Review and schedule' })).toBeInTheDocument();
-});
-
-test('labels the marketing product journey as an illustrative preview', () => {
-  render(<HomePage />);
-
-  expect(screen.getByRole('link', { name: 'Sparrow by TechBliss' })).toBeInTheDocument();
-  expect(screen.getByRole('img', {
-    name: /illustrative product preview showing company research, brand context, sample marketing content, and calendar planning/i,
+  expect(screen.getByRole('heading', {
+    level: 1,
+    name: 'Content for every company. One workspace.',
   })).toBeInTheDocument();
-  expect(screen.getByText('Illustrative preview · not a live schedule')).toBeInTheDocument();
-  expect(screen.getByText('01 / COMPANY RESEARCH')).toBeInTheDocument();
-  expect(screen.getByText('02 / BRAND CONTEXT')).toBeInTheDocument();
-  expect(screen.getByText('03 / CONTENT FOR REVIEW')).toBeInTheDocument();
-  expect(screen.getByText('04 / CONTENT PLAN')).toBeInTheDocument();
+  expect(screen.getByText(/Paste a company website\. Sparrow learns the brand/i)).toBeInTheDocument();
+  const getStartedLinks = screen.getAllByRole('link', { name: 'Get started' });
+  expect(getStartedLinks.length).toBeGreaterThan(0);
+  expect(getStartedLinks.every(link => link.getAttribute('href') === '/signup')).toBe(true);
+  expect(screen.getByRole('link', { name: 'See how it works' })).toHaveAttribute('href', '#how');
+});
+
+test('explains the current three-step workflow', () => {
+  render(<HomePage />);
+
+  expect(screen.getByRole('heading', { name: 'From a website to a content calendar.' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Add the company website' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Get a brand workspace' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Generate, edit, schedule' })).toBeInTheDocument();
+});
+
+test('labels the example-post section and renders the illustrative product preview', () => {
+  const { container } = render(<HomePage />);
+
+  const examplePosts = screen.getByRole('region', { name: 'Example posts' });
+  expect(within(examplePosts).getByRole('heading', {
+    name: 'On-brand posts for every channel.',
+  })).toBeInTheDocument();
+  expect(within(examplePosts).getByText('Example posts, generated from a company website.')).toBeInTheDocument();
+
+  const productPreview = container.querySelector('.sp-stage');
+  expect(productPreview).toHaveAttribute('aria-hidden', 'true');
+  expect(within(productPreview as HTMLElement).getByText('Acme Studio')).toBeInTheDocument();
+  expect(within(productPreview as HTMLElement).getByText('Instagram')).toBeInTheDocument();
+  expect(within(productPreview as HTMLElement).getByText(/Behind every launch is a team that cares/)).toBeInTheDocument();
+
+  expect(within(examplePosts).getByText('How we turned one website into a month of posts.')).toBeInTheDocument();
+  expect(within(examplePosts).getByText('A 60-second intro to the company.')).toBeInTheDocument();
 });

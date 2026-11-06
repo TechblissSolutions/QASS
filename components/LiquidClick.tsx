@@ -10,7 +10,7 @@ import { useEffect } from 'react';
  * Ripples are drawn on a layer outside your React tree, so no page markup is touched.
  * Off switches: ?lq=off, localStorage 'sparrow-lq' = 'off', or reduced motion.
  */
-const BARS = '.sp-nav, .pz-nav, .sn, .company-shell-header, .company-sidebar, .dashboard-v6-header, .sparrow-account-header';
+const BARS = '.sp-nav, .pz-nav, .sn, .company-shell-header, .company-sidebar, .dashboard-v6-header, .sparrow-account-header, [data-lq-bar]';
 const POPS = 'a, button, [role="button"]';
 
 function disabled() {

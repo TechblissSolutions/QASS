@@ -6,7 +6,7 @@ Sparrow by TechBliss is a production-oriented Next.js content-generation applica
 
 - **Next.js App Router**: UI and server API routes.
 - **Supabase Auth + Postgres + RLS**: identity, durable projects/jobs, ownership and plan metadata.
-- **n8n**: website analysis, content generation and live-view workflow execution. Sparrow does not require n8n workflow changes.
+- **n8n**: website analysis, content generation and live-view workflow execution. The optional anonymous free trial uses its own trial nodes; normal account workflows remain unchanged.
 - **Upstash Redis**: shared serverless rate limits and generation safety counters. This replaces correctness-critical in-memory counters.
 - **Sentry**: server/client error monitoring.
 - **Vercel**: horizontally scalable hosting for the Next.js application.
@@ -69,6 +69,17 @@ MAINTENANCE_MODE=false
 EDGE_CONFIG=
 ```
 
+For anonymous free-trial generation, keep `N8N_BASE` pointed at the same n8n host and add these server-only settings:
+
+```env
+N8N_FREE_TRIAL_AUTH_VALUE=<generate-a-long-random-secret>
+N8N_FREE_TRIAL_AUTH_HEADER=X-Sparrow-Trial-Key
+N8N_FREE_TRIAL_PATH=/webhook-test/sparrow-free-trial-generate
+N8N_FREE_TRIAL_TIMEOUT_MS=170000
+```
+
+Use `/webhook-test/sparrow-free-trial-generate` while the workflow is listening in the n8n editor, then `/webhook/sparrow-free-trial-generate` after activating it. Webhook authentication is intentionally disabled during initial testing; enable Header Auth on the `Sparrow Free Trial Webhook` node after testing and use the matching dedicated credential.
+
 ### Secret handling
 
 Never expose `SUPABASE_SERVICE_ROLE_KEY`, `SPARROW_LIVE_VIEW_SECRET`, or Redis tokens with a `NEXT_PUBLIC_` prefix. Keep them in Vercel server environment variables and in local `.env.local`, which is gitignored.
@@ -82,6 +93,8 @@ Generate the live-view secret with a password manager or, on PowerShell, `-join 
 Run `supabase_schema.sql` in the Supabase SQL Editor. The final state enables RLS for projects, jobs, profiles, subscriptions and audit logs.
 
 Analysis and generation require an authenticated Supabase session. Project creation is performed only through the server-side company-limit RPC; browser clients cannot insert directly into `projects`.
+
+Google sign-in uses Supabase Auth OAuth. Enable the Google provider in Supabase Authentication settings and add the Supabase callback URL (`https://<project-ref>.supabase.co/auth/v1/callback`) to the Google OAuth client's authorized redirect URIs. Set the deployed app URL as the Supabase Site URL and add each app origin to Supabase's allowed redirect URLs, including `https://<app-domain>/auth/callback` (and the local development callback when needed). The login and signup pages then return through `/auth/callback` before opening the requested workspace page.
 
 The schema includes a server-only transactional function for company limits. The API invokes it with the Supabase service-role key so concurrent requests cannot race past Free/Pro limits.
 
