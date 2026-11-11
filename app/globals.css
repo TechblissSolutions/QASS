@@ -756,9 +756,9 @@ body{background:var(--surface)}
 
 /* V8 polish: auth actions must remain visible, company cards are intentionally simple, and the client workspace owns its color system. */
 .auth-card form{gap:13px}.auth-submit{display:flex!important;visibility:visible!important;opacity:1!important;width:100%!important;min-height:50px!important;padding:13px 18px!important;background:#d03e7c!important;color:#fff!important;border:1px solid #d03e7c!important;border-radius:8px!important;font-size:14px!important;font-weight:900!important;line-height:1!important;box-shadow:none!important}.auth-submit:hover{background:#e43e08!important;border-color:#e43e08!important;color:#fff!important}.remember-row{order:10;margin-top:1px}.auth-link-button{display:block;visibility:visible!important}
-.dashboard-v6-company-only{min-height:330px;align-items:center;justify-content:center;text-align:center;background:var(--company-background,#fff);border-color:color-mix(in srgb,var(--company-primary,#111) 22%,#d1d1ca)}.dashboard-v6-company-only::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,var(--company-primary,#111) 0 72%,var(--company-secondary,var(--company-primary,#111)) 72%);pointer-events:none}.dashboard-v6-company-only:hover{border-color:var(--company-primary,#111);box-shadow:12px 12px 0 color-mix(in srgb,var(--company-primary,#111) 12%,transparent)}.dashboard-v6-logo-large{width:150px;height:150px;border-radius:18px;border:2px solid color-mix(in srgb,var(--company-primary,#111) 65%,var(--company-secondary,var(--company-primary,#111)));background:var(--company-background,#f4f4f0);box-shadow:0 10px 35px color-mix(in srgb,var(--company-primary,#111) 12%,transparent)}.dashboard-v6-logo-large img{padding:12px}.dashboard-v6-company-only h3{font-size:38px;line-height:1;letter-spacing:-.065em;margin:24px 0 0;color:var(--company-primary,#111)}
+.dashboard-v6-company-only{min-height:330px;align-items:center;justify-content:center;text-align:center;background:var(--company-background,#fff);border-color:color-mix(in srgb,var(--company-primary,#111) 22%,#d1d1ca)}.dashboard-v6-company-only::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,var(--company-primary,#111) 0 72%,var(--company-secondary,var(--company-primary,#111)) 72%);pointer-events:none}.dashboard-v6-company-only:hover{border-color:var(--company-primary,#111);box-shadow:12px 12px 0 color-mix(in srgb,var(--company-primary,#111) 12%,transparent)}.dashboard-v6-logo-large{width:176px;height:176px;border-radius:18px;border:2px solid color-mix(in srgb,var(--company-primary,#111) 65%,var(--company-secondary,var(--company-primary,#111)));background:var(--company-background,#f4f4f0);box-shadow:0 10px 35px color-mix(in srgb,var(--company-primary,#111) 12%,transparent)}.dashboard-v6-logo-large img{padding:0}.dashboard-v6-company-only h3{font-size:38px;line-height:1;letter-spacing:-.065em;margin:24px 0 0;color:var(--company-primary,#111)}
 .company-shell-header{background:var(--client-primary,#111)!important;color:var(--client-on-primary,#fff)!important;border-bottom-color:color-mix(in srgb,var(--client-primary,#111) 72%,#000)!important}.company-sidebar{background:var(--client-background,#fff)!important;color:var(--client-text,#111)!important;border-right-color:color-mix(in srgb,var(--client-secondary,var(--client-primary,#111)) 45%,#ddd)!important}.company-sidebar-logo{border-color:var(--client-secondary,var(--client-primary,#111))!important}.company-sidebar nav a.active{background:color-mix(in srgb,var(--client-primary,#111) 8%,var(--client-background,#fff))!important;color:var(--client-primary,#111)!important;box-shadow:inset 3px 0 var(--client-secondary,var(--client-primary,#111))}.company-shell-nav a.active{background:color-mix(in srgb,var(--client-on-primary,#fff) 18%,transparent)!important}.company-shell-company-name{color:var(--client-on-primary,#fff)!important}.company-shell-switch{color:var(--client-on-primary,#fff)!important}.company-shell-all{color:var(--client-on-primary,#fff)!important}.company-shell-header .account-trigger{background:var(--client-background,#fff)!important;color:var(--client-text,#111)!important}
-@media(max-width:760px){.dashboard-v6-company-only{min-height:290px}.dashboard-v6-logo-large{width:120px;height:120px}.dashboard-v6-company-only h3{font-size:30px}.auth-card{padding:28px 24px}.auth-submit{min-height:50px}}
+@media(max-width:760px){.dashboard-v6-company-only{min-height:290px}.dashboard-v6-logo-large{width:140px;height:140px}.dashboard-v6-company-only h3{font-size:30px}.auth-card{padding:28px 24px}.auth-submit{min-height:50px}}
 
 
 /* V9 UI polish */
@@ -797,7 +797,7 @@ body{background:var(--surface)}
 .smart-logo-image,.smart-logo-cropped{position:absolute;display:block;max-width:none;object-fit:fill;user-select:none}
 .smart-logo-image{inset:0;width:100%;height:100%;object-fit:contain}
 .smart-logo-cropped{object-fit:fill}
-.dashboard-v6-logo-large .smart-logo{width:100%;height:100%;padding:8px}
+.dashboard-v6-logo-large .smart-logo{width:100%;height:100%;padding:2px}
 .brand-data-page .brand-identity-logo .smart-logo{width:100%;height:100%;padding:7px}
 .company-shell-logo .smart-logo,.company-sidebar-logo .smart-logo,.switcher-logo .smart-logo{width:100%;height:100%;padding:4px}
 
@@ -1195,6 +1195,20 @@ video.modal-media{background:#000}
 .social-card-title-row{display:flex;align-items:center;gap:8px}
 .social-card-status{font-size:8px;font-weight:900;color:#087443;background:#ecfdf3;border-radius:999px;padding:4px 7px;white-space:nowrap}
 .social-provider-instagram{color:#c13584!important;background:#fff0f7!important}.social-provider-facebook{color:#1877f2!important;background:#eff6ff!important}.social-provider-linkedin{color:#0a66c2!important;background:#eff6ff!important}.social-provider-x{color:#111!important;background:#f3f3f3!important}.social-provider-youtube{color:#ff0000!important;background:#fff1f1!important}.social-provider-wordpress{color:#21759b!important;background:#eef9ff!important}
+
+/* Keep company logos legible beyond the dashboard, including Studio and Brand Data. */
+.company-shell-inner-minimal .company-shell-logo{width:96px;height:54px;flex:0 0 96px}
+.company-shell-inner-minimal .company-shell-logo .smart-logo,
+.brand-data-page .brand-identity-logo .smart-logo{padding:1px}
+.brand-data-page .brand-identity-logo{width:100px;height:78px;flex-basis:100px}
+.profile-company-logo{width:68px;height:68px}
+.profile-brand-logo{width:72px;height:72px}
+.platform-piece-grid .mock-avatar{flex-basis:38px}
+.platform-piece-grid .mock-avatar .smart-logo{padding:1px}
+@media(max-width:700px){
+  .company-shell-inner-minimal .company-shell-logo{width:76px;height:46px;flex-basis:76px}
+  .brand-data-page .brand-identity-logo{width:82px;height:68px;flex-basis:82px}
+}.social-provider-youtube{color:#ff0000!important;background:#fff1f1!important}.social-provider-wordpress{color:#21759b!important;background:#eef9ff!important}
 .social-disconnected-body{margin-top:16px;padding-top:14px;border-top:1px solid #eeeae5}
 .social-destination-inline{display:grid;gap:6px}
 .social-destination-inline>span{font-size:9px;font-weight:850;color:#4b4b47}.social-destination-inline em{font-style:normal;color:#9a9a94;font-weight:700;margin-left:5px}

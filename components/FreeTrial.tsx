@@ -391,7 +391,7 @@ export default function FreeTrial() {
           </form>}
         </section>;
         })()}
-        <footer className={styles.footer} data-trial-reveal=""><span>SPARROW BY TECHBLISS</span><span>100 trial credits · One LinkedIn draft · One Blog draft</span></footer>
+        <footer className={styles.footer} data-trial-reveal=""><span>SPARROW</span><span>100 trial credits · One LinkedIn draft · One Blog draft</span></footer>
       </div>
     </main>
   );

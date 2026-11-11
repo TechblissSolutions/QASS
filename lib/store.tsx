@@ -8,10 +8,10 @@ import { getSupabaseClient, getJob, getLatestJob, getProject, type JobRow, type 
 import { persistJobState } from './job-persistence';
 
 export const DEFAULT_PREFS: AppState['prefs'] = {
-  platforms: ['Instagram', 'LinkedIn'],
-  goal: 'Brand / Product Awareness',
-  tone: 'Professional',
-  style: 'Seth Godin',
+  platforms: [],
+  goal: '',
+  tone: '',
+  style: '',
   extra: '',
 };
 

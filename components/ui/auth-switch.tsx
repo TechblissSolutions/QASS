@@ -147,7 +147,7 @@ export default function AuthSwitch({ initialMode = "signin" }: { initialMode?: M
         redirectTo: `${window.location.origin}/login`,
       });
       if (error) throw error;
-      setNotice("If that email has a Sparrow by TechBliss account, a reset link is on its way.");
+      setNotice("If that email has a Sparrow account, a reset link is on its way.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to send a reset link.");
     } finally {
@@ -282,7 +282,7 @@ export default function AuthSwitch({ initialMode = "signin" }: { initialMode?: M
               <button type="button" className="auth-link-button" onClick={resetPassword} disabled={busy}>Forgot password?</button>
             </div>
             <p className="as-mobile-switch">
-              New to Sparrow by TechBliss?{" "}
+              New to Sparrow?{" "}
               <button type="button" className="auth-link-button" onClick={() => switchMode("signup")}>Create an account</button>
             </p>
           </form>

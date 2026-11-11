@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useStore } from '@/lib/store';
-import { fetchBrandAppearance, brandThemeComplete, mergeTheme } from '@/lib/brand-client';
+import { fetchBrandAppearance, brandThemeComplete, mergeTheme, verifiedCompanyLogo } from '@/lib/brand-client';
 import { companyInitials, companyNameFromUrl } from '@/lib/utils';
 import BrandTheme from './BrandTheme';
 import AccountMenu from './AccountMenu';
@@ -39,7 +39,7 @@ export default function CompanyHeader() {
 
   if (!s.projectId || !s.profile) return null;
   const name = String(s.profile.company_name || companyNameFromUrl(s.url) || 'Company');
-  const logo = String(s.brandTheme?.logo_url || '');
+  const logo = verifiedCompanyLogo(s.brandTheme);
   const primary = String(s.brandTheme?.primary_color || '#111111');
   const onPrimary = 'var(--client-on-primary, #fff)';
   const href = (route: string) => `${route}?project=${encodeURIComponent(s.projectId || '')}${s.jobRowId && route === '/studio' ? `&job=${encodeURIComponent(s.jobRowId)}` : ''}`;
@@ -66,7 +66,7 @@ export default function CompanyHeader() {
     </header>
     <aside className={`company-sidebar${referenceLayout ? ' company-sidebar-reference' : ''}`} style={{ '--company-primary': primary, '--company-on-primary': onPrimary } as React.CSSProperties}>
       <div className="company-sidebar-logo company-sidebar-sparrow-mark"><span className="landing-mark" aria-hidden="true"><i /><i /><i /></span></div>
-      <div className="company-sidebar-name company-shell-wordmark">Sparrow by TechBliss</div>
+      <div className="company-sidebar-name company-shell-wordmark">Sparrow</div>
       <nav>
         {nav.map(([label, route]) => <Link key={label} className={active(route) ? 'active' : ''} href={route.startsWith('/dashboard/project') ? route : href(route)}><span className="sidebar-nav-icon">{label === 'Studio' ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.7 6.3L20 11l-6.3 1.7L12 19l-1.7-6.3L4 11l6.3-1.7L12 3Z" /></svg> : label === 'Create' ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5h8l4 4v11H6z" /><path d="M14 4.5v4h4M9 14h6M9 17h4" /></svg> : label === 'Schedule' ? <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M7 3.5v4M17 3.5v4M3.5 9.5h17" /></svg> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7.5a7 7 0 1 1-1.1 8.1" /><path d="M7 3.5v4h4" /><path d="M17 16.5v4h-4" /></svg>}</span><strong>{label}</strong></Link>)}
       </nav>

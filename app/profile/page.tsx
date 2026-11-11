@@ -7,7 +7,8 @@ import { useStore } from '@/lib/store';
 import { getAccessToken } from '@/lib/auth';
 import { listProjects, updateProject, type ProjectRow } from '@/lib/supabase';
 import { companyInitials, companyNameFromUrl } from '@/lib/utils';
-import { fetchBrandAppearance } from '@/lib/brand-client';
+import { fetchBrandAppearance, mergeTheme, verifiedCompanyLogo } from '@/lib/brand-client';
+import { BRAND_LOGO_SOURCE_VERSION } from '@/lib/constants';
 import SmartLogo from '@/components/SmartLogo';
 import AccountMenu from '@/components/AccountMenu';
 import KineticMenu from '@/components/KineticMenu';
@@ -20,10 +21,10 @@ type AccountResponse={accounts:Account[];providers:Array<{id:string;configured:b
 type UserAccount={user:{id:string;email?:string;fullName?:string|null};role:string;entitlements:{plan:string;maxCompanies:number|null;canRegenerate:boolean;canUseAllFeatures:boolean}};
 
 const providers:Provider[]=[
-  {id:'instagram',label:'Instagram',description:'Connect the Instagram business account you want Sparrow by TechBliss to publish to.'},
+  {id:'instagram',label:'Instagram',description:'Connect the Instagram business account you want Sparrow to publish to.'},
   {id:'facebook',label:'Facebook',description:'Connect a Facebook Page for publishing.'},
   {id:'linkedin',label:'LinkedIn',description:'Connect your LinkedIn account for publishing.'},
-  {id:'x',label:'X / Twitter',description:'Connect the X account you want Sparrow by TechBliss to publish to.'},
+  {id:'x',label:'X / Twitter',description:'Connect the X account you want Sparrow to publish to.'},
   {id:'youtube',label:'YouTube',description:'Connect your YouTube channel for publishing.'},
   {id:'wordpress',label:'WordPress',description:'Connect your WordPress site for publishing.'},
 ];
@@ -96,19 +97,16 @@ function ProfileContent(){
     const current=(selectedProject.brand_theme||{}) as Record<string,unknown>;
     const genericPrimary=['#111','#111111','#111827'].includes(String(current.primary_color||'').toLowerCase());
     const genericSecondary=['#64748b','#d8d8d2'].includes(String(current.secondary_color||'').toLowerCase());
-    const needsRefresh=!String(current.logo_url||'').trim() || !String(current.primary_color||'').trim() || !String(current.secondary_color||'').trim() || !String(current.background_color||'').trim() || !String(current.text_color||'').trim() || (genericPrimary && genericSecondary);
+    const needsRefresh=current.logo_source_version!==BRAND_LOGO_SOURCE_VERSION || !String(current.primary_color||'').trim() || !String(current.secondary_color||'').trim() || !String(current.background_color||'').trim() || !String(current.text_color||'').trim() || (genericPrimary && genericSecondary);
     if(!needsRefresh) return;
     let alive=true;
     void (async()=>{
       let fetched=await fetchBrandAppearance(selectedProject.url,true);
       if(!fetched || !String((fetched as any).logo_url||'').trim() || !String((fetched as any).primary_color||'').trim()) { await new Promise(resolve=>setTimeout(resolve,650)); fetched=await fetchBrandAppearance(selectedProject.url,true); }
       if(!alive || !fetched) return;
-      const merged={...current};
-      for(const [key,value] of Object.entries(fetched)){
-        if(value===null||value===undefined||String(value).trim()==='') continue;
-        const shouldUseFetched=!current[key] || key==='logo_url' || (key==='primary_color'&&genericPrimary) || (key==='secondary_color'&&genericSecondary);
-        if(shouldUseFetched) merged[key]=value;
-      }
+      const merged=mergeTheme(current,fetched);
+      if(genericPrimary&&fetched.primary_color) merged.primary_color=fetched.primary_color;
+      if(genericSecondary&&fetched.secondary_color) merged.secondary_color=fetched.secondary_color;
       setProjects(prev=>prev.map(p=>p.id===selectedProject.id?{...p,brand_theme:merged}:p));
       void updateProject(selectedProject.id,{brand_theme:merged}).catch(()=>{});
     })();
@@ -175,7 +173,7 @@ function ProfileContent(){
 
   function startConnect(provider:string){
     if(!providerConfig[provider]){
-      toast(`${providers.find(p=>p.id===provider)?.label||provider} connection is not configured for this Sparrow by TechBliss environment yet.`);
+      toast(`${providers.find(p=>p.id===provider)?.label||provider} connection is not configured for this Sparrow environment yet.`);
       return;
     }
     void connect(provider);
@@ -184,12 +182,12 @@ function ProfileContent(){
   if(!ready||loading)return <StoreLoading/>;
 
   return <div className="sparrow-account-shell">
-    <header className="sparrow-account-header"><div className="sparrow-header-left"><button className="sparrow-wordmark" onClick={()=>router.push('/dashboard')} aria-label="Back to Sparrow by TechBliss"><span className="sparrow-mark">S</span><span>Sparrow by TechBliss</span></button><nav className="sparrow-global-nav"><button onClick={()=>router.push('/dashboard')}>All companies</button><button onClick={()=>router.push('/analyse?new=1')}>＋ Add company</button></nav></div><div style={{display:'flex',alignItems:'center',gap:10}}><KineticMenu links={[{label:'All companies',href:'/dashboard'},{label:'Add company',href:'/analyse?new=1'},{label:'Create tools',href:'/create'},{label:'Profile',href:'/profile'}]} /><AccountMenu compact /></div></header>
+    <header className="sparrow-account-header"><div className="sparrow-header-left"><button className="sparrow-wordmark" onClick={()=>router.push('/dashboard')} aria-label="Back to Sparrow"><span className="sparrow-mark">S</span><span>Sparrow</span></button><nav className="sparrow-global-nav"><button onClick={()=>router.push('/dashboard')}>All companies</button><button onClick={()=>router.push('/analyse?new=1')}>＋ Add company</button></nav></div><div style={{display:'flex',alignItems:'center',gap:10}}><KineticMenu links={[{label:'All companies',href:'/dashboard'},{label:'Add company',href:'/analyse?new=1'},{label:'Create tools',href:'/create'},{label:'Profile',href:'/profile'}]} /><AccountMenu compact /></div></header>
     <main className="page-container profile-page">
       <section className="profile-hero">
         <div>
           <span className="calendar-kicker">PROFILE</span>
-          <h1>Your Sparrow by TechBliss profile</h1>
+          <h1>Your Sparrow profile</h1>
           <p>Manage your companies, Brand Data, publishing accounts, plan and future API access from one place.</p>
         </div>
         <div className="profile-user-card"><div className="profile-user-avatar">{String(account?.user?.fullName||account?.user?.email||'?').slice(0,1).toUpperCase()}</div><div><strong>{account?.user?.fullName||account?.user?.email||'Account'}</strong><span>{account?.user?.email}</span></div></div>
@@ -198,7 +196,7 @@ function ProfileContent(){
       <section className="profile-section">
         <div className="profile-section-head"><div><span>MY COMPANIES</span><h2>Your company workspaces</h2></div><small>{projects.length} {projects.length===1?'company':'companies'}</small></div>
         {projects.length===0?<div className="profile-empty"><strong>No companies yet</strong><span>Add a company from your workspace to get started.</span><button className="btn btn-primary" onClick={()=>router.push('/analyse?new=1')}>＋ Add company</button></div>:<div className="profile-company-grid">
-          {projects.map(project=>{const theme=(project.brand_theme||{}) as any;const active=selectedProject?.id===project.id;const name=companyName(project);const cardStyle={'--client-primary':color(theme.primary_color,'#d03e7c'),'--client-secondary':color(theme.secondary_color,color(theme.primary_color,'#d03e7c')),'--client-background':color(theme.background_color,'#ffffff'),'--client-text':color(theme.text_color,'#111827'),'--client-muted':color(theme.text_color,'#64748b'),'--client-line':`color-mix(in srgb, ${color(theme.text_color,'#111827')} 18%, ${color(theme.background_color,'#ffffff')})`,'--client-soft':`color-mix(in srgb, ${color(theme.primary_color,'#d03e7c')} 8%, ${color(theme.background_color,'#ffffff')})`} as React.CSSProperties;return <button key={project.id} style={cardStyle} className={`profile-company-card ${active?'active':''}`} onClick={()=>chooseCompany(project.id)}><span className="profile-company-logo">{theme.logo_url?<SmartLogo src={'/api/brand-logo?src='+encodeURIComponent(String(theme.logo_url))} alt="" fallback={companyInitials(name)}/>:<b>{companyInitials(name)}</b>}</span><span className="profile-company-copy"><strong>{name}</strong><small>{project.url}</small></span><span className="profile-company-arrow">{active?'Selected':'View →'}</span></button>})}
+          {projects.map(project=>{const theme=(project.brand_theme||{}) as any;const logo=verifiedCompanyLogo(theme);const active=selectedProject?.id===project.id;const name=companyName(project);const cardStyle={'--client-primary':color(theme.primary_color,'#d03e7c'),'--client-secondary':color(theme.secondary_color,color(theme.primary_color,'#d03e7c')),'--client-background':color(theme.background_color,'#ffffff'),'--client-text':color(theme.text_color,'#111827'),'--client-muted':color(theme.text_color,'#64748b'),'--client-line':`color-mix(in srgb, ${color(theme.text_color,'#111827')} 18%, ${color(theme.background_color,'#ffffff')})`,'--client-soft':`color-mix(in srgb, ${color(theme.primary_color,'#d03e7c')} 8%, ${color(theme.background_color,'#ffffff')})`} as React.CSSProperties;return <button key={project.id} style={cardStyle} className={`profile-company-card ${active?'active':''}`} onClick={()=>chooseCompany(project.id)}><span className="profile-company-logo">{logo?<SmartLogo src={'/api/brand-logo?src='+encodeURIComponent(logo)} alt="" fallback={companyInitials(name)}/>:<b>{companyInitials(name)}</b>}</span><span className="profile-company-copy"><strong>{name}</strong><small>{project.url}</small></span><span className="profile-company-arrow">{active?'Selected':'View →'}</span></button>})}
         </div>}
       </section>
 
@@ -247,7 +245,7 @@ function ProfileContent(){
 
             <section className="profile-panel profile-brand-panel">
               <div className="profile-panel-head"><div><span>BRAND DATA</span><h3>Your saved brand identity</h3></div><button className="btn btn-ghost btn-sm" onClick={()=>router.push(`/brand?project=${encodeURIComponent(selectedProject.id)}`)}>Open Brand Data</button></div>
-              <div className="profile-brand-preview"><div className="profile-brand-logo">{selectedTheme.logo_url?<SmartLogo src={'/api/brand-logo?src='+encodeURIComponent(String(selectedTheme.logo_url))} alt="" fallback={companyInitials(companyName(selectedProject))}/>:<b>{companyInitials(companyName(selectedProject))}</b>}</div><div><strong>{companyName(selectedProject)}</strong><span>{String((selectedProject.profile as any)?.company_summary||'Saved company identity and brand settings.')}</span></div></div>
+              <div className="profile-brand-preview"><div className="profile-brand-logo">{verifiedCompanyLogo(selectedTheme)?<SmartLogo src={'/api/brand-logo?src='+encodeURIComponent(verifiedCompanyLogo(selectedTheme))} alt="" fallback={companyInitials(companyName(selectedProject))}/>:<b>{companyInitials(companyName(selectedProject))}</b>}</div><div><strong>{companyName(selectedProject)}</strong><span>{String((selectedProject.profile as any)?.company_summary||'Saved company identity and brand settings.')}</span></div></div>
               <div className="profile-color-row"><div><span>Primary</span><b style={{background:color(selectedTheme.primary_color,'#111827')}}/></div><div><span>Secondary</span><b style={{background:color(selectedTheme.secondary_color,'#64748b')}}/></div><div><span>Background</span><b style={{background:color(selectedTheme.background_color,'#ffffff')}}/></div><div><span>Text</span><b style={{background:color(selectedTheme.text_color,'#111827')}}/></div></div>
               <div className="profile-brand-meta"><span>Font</span><strong>{String(selectedTheme.font_family||'Inter')}</strong></div>
             </section>
@@ -255,7 +253,7 @@ function ProfileContent(){
             <section className="profile-panel profile-plan-panel">
               <div className="profile-panel-head"><div><span>SUBSCRIPTION</span><h3>Your current plan</h3></div></div>
               <div className="profile-plan-badge">{planLabel(account?.entitlements.plan||'free')}</div>
-              <p>{account?.entitlements.plan==='pro'?'You have access to Pro features from Sparrow by TechBliss.':'You are currently using the Sparrow by TechBliss Free plan.'}</p>
+              <p>{account?.entitlements.plan==='pro'?'You have access to Pro features from Sparrow.':'You are currently using the Sparrow Free plan.'}</p>
               <div className="profile-plan-facts"><div><span>Company workspaces</span><strong>{account?.entitlements.maxCompanies==null?'Unlimited':account.entitlements.maxCompanies}</strong></div><div><span>Regeneration</span><strong>{account?.entitlements.canRegenerate?'Included':'Limited'}</strong></div></div>
               <button className="btn btn-ghost" onClick={()=>router.push('/pricing')}>View plans & billing</button>
             </section>

@@ -180,7 +180,7 @@ export default function AdminPage() {
       }));
       setNotice(apiModeOverride === null
         ? 'Project API mode is now controlled by the company user.'
-        : `Project is now locked to ${apiModeOverride === 'platform' ? 'Our API (Sparrow by TechBliss)' : "the company's own APIs"}.`);
+        : `Project is now locked to ${apiModeOverride === 'platform' ? 'Our API (Sparrow)' : "the company's own APIs"}.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to save project API mode.');
     } finally {
@@ -225,7 +225,7 @@ export default function AdminPage() {
       <aside className="admin-sidebar">
         <Link href="/dashboard" className="admin-brand">
           <span className="admin-brand-mark">S</span>
-          <span>Sparrow by TechBliss<small>ADMIN CONSOLE</small></span>
+          <span>Sparrow<small>ADMIN CONSOLE</small></span>
         </Link>
         <div className="admin-nav-label">WORKSPACE</div>
         <button className={`admin-nav-item ${tab === 'overview' ? 'active' : ''}`} onClick={() => { setTab('overview'); setSelected(null); }}><span>O</span> Overview</button>

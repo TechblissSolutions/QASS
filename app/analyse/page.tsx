@@ -363,10 +363,10 @@ function AnalysePage() {
           <button
             className="sparrow-wordmark"
             onClick={() => router.push('/dashboard')}
-            aria-label="Back to Sparrow by TechBliss"
+            aria-label="Back to Sparrow"
           >
             <span className="sparrow-mark">S</span>
-            <span>Sparrow by TechBliss</span>
+            <span>Sparrow</span>
           </button>
           {signedIn && (
             <nav className="sparrow-global-nav" aria-label="Workspace navigation">
@@ -454,7 +454,7 @@ function AnalysePage() {
     return <div className="sparrow-global-page analyse-page">{Header()}<main className="sparrow-global-main"><div className="work-card analyse-card"><div className="analyse-inner">
       <ResearchStepIndicator currentStep="mode" />
       <div className="auth-kicker">AI CONFIGURATION</div><h2>How would you like to power this company?</h2><p className="analyse-copy">Choose the AI setup before connecting social accounts.</p>
-      <div className="api-mode-choice-grid"><button type="button" className="api-mode-choice" onClick={() => setStep('social')}><strong>Use Sparrow by TechBliss</strong><span>Continue with Sparrow by TechBliss&apos;s configured AI services, then connect socials and analyse your website.</span><b>Continue with Sparrow by TechBliss →</b></button><button type="button" className="api-mode-choice" onClick={() => void chooseOwnApis()}><strong>Use My Own APIs</strong><span>Configure this company's AI, website analysis, research, and media providers first.</span><b>Configure my APIs →</b></button></div>
+      <div className="api-mode-choice-grid"><button type="button" className="api-mode-choice" onClick={() => setStep('social')}><strong>Use Sparrow</strong><span>Continue with Sparrow&apos;s configured AI services, then connect socials and analyse your website.</span><b>Continue with Sparrow →</b></button><button type="button" className="api-mode-choice" onClick={() => void chooseOwnApis()}><strong>Use My Own APIs</strong><span>Configure this company's AI, website analysis, research, and media providers first.</span><b>Configure my APIs →</b></button></div>
       {err && <p className="err" role="alert">{err}</p>}<div className="analyse-back"><button className="btn btn-ghost" onClick={() => setStep('url')}>← Back</button></div>
     </div></div></main></div>;
   }
@@ -544,7 +544,7 @@ function AnalysePage() {
               <div className="auth-kicker">READY WHEN YOU ARE</div>
               <h2>Review your company website</h2>
               <p className="analyse-copy">
-                You can edit the website below. Sparrow by TechBliss has not analysed it yet. Click Analyse Website when you are ready.
+                You can edit the website below. Sparrow has not analysed it yet. Click Analyse Website when you are ready.
               </p>
               <div className="analyse-urlbar">
                 <div className="analyse-url-input">
@@ -627,7 +627,7 @@ function AnalysePage() {
           <div className="analyse-url">{s.url}</div>
           <AnalyseScene fallback={<ScanFallback />} />
           <p className="analyse-loading-message" role="status">
-            Sparrow by TechBliss is reading the public website and preparing your company profile. This can take a little while.
+            Sparrow is reading the public website and preparing your company profile. This can take a little while.
           </p>
           <div className="analyse-loading-footer">
             <span>Analysis is in progress</span>

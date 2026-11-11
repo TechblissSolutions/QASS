@@ -6,6 +6,7 @@ export const PLATFORMS = [
   'YouTube',
   'Blogs',
 ] as const;
+export const BRAND_LOGO_SOURCE_VERSION = 5;
 export const STYLES = ['Seth Godin','Alex Hormozi','Gary Vaynerchuk','Dan Kennedy','Russell Brunson','Tony Robbins','Grant Cardone','Jordan Belfort'] as const;
 export const SEC_META = [{key:'website',name:'Website and SEO'},{key:'social',name:'Social media'},{key:'ads',name:'Ads and messages'},{key:'blogs',name:'Blog'}] as const;
 const COLORS: Record<string,[string,string]> = {

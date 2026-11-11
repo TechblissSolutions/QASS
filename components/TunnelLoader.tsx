@@ -267,7 +267,7 @@ export default function TunnelLoader({ title = 'Loading your companies', delay =
       </div>
       <div className="tl-flash" aria-hidden="true" />
       <div className="tl-center">
-        <span className="tl-kicker">SPARROW BY TECHBLISS</span>
+        <span className="tl-kicker">SPARROW</span>
         <SignalRevealText as="h2" text={title} loop className="tl-title" />
         <div className="tl-bar" aria-hidden="true"><i /></div>
       </div>

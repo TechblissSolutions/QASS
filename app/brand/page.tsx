@@ -3,62 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
-import { getAccessToken } from '@/lib/auth';
 import { updateProject } from '@/lib/supabase';
+import { fetchBrandAppearance, mergeTheme, verifiedCompanyLogo } from '@/lib/brand-client';
+import { getAccessToken } from '@/lib/auth';
 import type { BrandTheme } from '@/lib/types';
 import StoreLoading from '@/components/StoreLoading';
 import CompanyHeader from '@/components/CompanyHeader';
 import SmartLogo from '@/components/SmartLogo';
-
-function isUsableLogoUrl(value: unknown): value is string {
-  if (typeof value !== 'string') return false;
-
-  const url = value.trim();
-
-  if (!url) return false;
-
-  try {
-    const parsed = new URL(url);
-
-    if (!/^https?:$/i.test(parsed.protocol)) {
-      return false;
-    }
-
-    const haystack = `${parsed.pathname} ${parsed.hostname}`.toLowerCase();
-
-    /*
-     * Do not accept obvious social-media icons as company logos.
-     * TechBliss was being detected as:
-     *
-     * /assets/img/brand/facebook.png
-     *
-     * which is a social icon, not the company logo.
-     */
-    const rejectedPatterns = [
-      /facebook/,
-      /instagram/,
-      /linkedin/,
-      /twitter/,
-      /x\.com/,
-      /youtube/,
-      /whatsapp/,
-      /telegram/,
-      /tiktok/,
-      /pinterest/,
-      /social/,
-      /social-icon/,
-      /social_icon/,
-    ];
-
-    if (rejectedPatterns.some((pattern) => pattern.test(haystack))) {
-      return false;
-    }
-
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 export default function BrandPage() {
   const {
@@ -120,15 +71,14 @@ export default function BrandPage() {
    * Brand appearance fallback.
    *
    * IMPORTANT:
-   * - If Supabase already has a logo, trust it.
-   * - Only call /api/brand-appearance when no stored logo exists.
-   * - Never allow a fallback social-media icon to become the company logo.
-   * - Do not modify SmartLogo.
+   * - Reuse a saved logo only when it matches the current extraction version.
+   * - Refresh stale or missing logos and show initials if none is confirmed.
+   * - Never allow an unverified fallback image to become the company logo.
    */
   useEffect(() => {
     if (!p?.company_website) return;
 
-    if (s.brandTheme?.logo_url) {
+    if (verifiedCompanyLogo(s.brandTheme)) {
       return;
     }
 
@@ -159,8 +109,7 @@ export default function BrandPage() {
           );
         }
 
-        const theme =
-          (await response.json()) as BrandTheme;
+        const theme = (await response.json()) as BrandTheme;
 
         if (cancelled) {
           return;
@@ -172,22 +121,7 @@ export default function BrandPage() {
          * But reject an obvious social-media image from becoming
          * the company logo.
          */
-        const safeTheme: BrandTheme = {
-          ...theme,
-          logo_url: isUsableLogoUrl(theme.logo_url)
-            ? theme.logo_url
-            : '',
-        };
-
-        /*
-         * Never overwrite a logo that may have appeared in the
-         * store while this request was running.
-         */
-        if (!s.brandTheme?.logo_url) {
-          set({
-            brandTheme: safeTheme,
-          });
-        }
+        set({ brandTheme: mergeTheme(s.brandTheme, theme) as unknown as BrandTheme });
       } catch {
         /*
          * Brand appearance detection is optional.
@@ -203,7 +137,7 @@ export default function BrandPage() {
     };
   }, [
     p?.company_website,
-    s.brandTheme?.logo_url,
+    s.brandTheme?.logo_source_version,
     set,
   ]);
 
@@ -259,6 +193,7 @@ export default function BrandPage() {
 
   const companyInitial =
     p.company_name?.slice(0, 1).toUpperCase() || 'C';
+  const verifiedLogo = verifiedCompanyLogo(s.brandTheme);
 
   return (
     <div className="company-workspace">
@@ -274,7 +209,7 @@ export default function BrandPage() {
             <h1>Brand Data</h1>
 
             <p>
-              Review the company information Sparrow by TechBliss uses
+              Review the company information Sparrow uses
               when creating content.
             </p>
           </div>
@@ -324,12 +259,12 @@ export default function BrandPage() {
 
         <div className="brand-identity">
           <div className="brand-identity-logo">
-            {s.brandTheme?.logo_url ? (
+            {verifiedLogo ? (
               <SmartLogo
                 src={
                   '/api/brand-logo?src=' +
                   encodeURIComponent(
-                    s.brandTheme.logo_url
+                    verifiedLogo
                   )
                 }
                 alt={p.company_name}
@@ -343,7 +278,7 @@ export default function BrandPage() {
             <strong>{p.company_name}</strong>
 
             <span>
-              {s.brandTheme?.logo_url
+              {verifiedLogo
                 ? 'Website logo detected'
                 : 'Logo could not be detected from the website'}
             </span>

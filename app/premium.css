@@ -2769,6 +2769,12 @@ a:active {
   box-shadow: 0 10px 22px rgb(208 62 124 / 22%);
 }
 
+.studio-options-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 clamp(24px, 4vw, 42px) clamp(24px, 4vw, 42px);
+}
+
 .studio-generate-action > span {
   font-size: 16px;
   transition: transform 140ms var(--ease-out);
@@ -3305,6 +3311,10 @@ a:active {
 
   .company-workspace .studio-generate-action {
     width: 100%;
+  }
+
+  .studio-options-actions {
+    padding: 0 22px 22px;
   }
 
   .studio-options-grid {

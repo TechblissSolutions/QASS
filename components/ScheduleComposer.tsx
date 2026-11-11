@@ -8,6 +8,7 @@ import SmartLogo from './SmartLogo';
 import { getAccessToken } from '@/lib/auth';
 import Modal from './Modal';
 import { useToast } from './Toast';
+import { verifiedCompanyLogo } from '@/lib/brand-client';
 
 type Account={id:string;provider:string;account_name:string;account_handle?:string|null;account_avatar_url?:string|null;username?:string|null;avatar_url?:string|null;status:string};
 type Props={open:boolean;onClose:()=>void;projectId:string;piece?:Piece|null;sourceJobId?:string|null;sourcePieceId?:string|null;existing?:any|null;onSaved:()=>void;brandTheme?:Partial<BrandThemeType>|null};
@@ -29,7 +30,7 @@ export default function ScheduleComposer({open,onClose,projectId,piece,sourceJob
   const [date,setDate]=useState(''); const [time,setTime]=useState('19:00'); const [timezone,setTimezone]=useState(Intl.DateTimeFormat().resolvedOptions().timeZone||'Asia/Kolkata');
   const [selected,setSelected]=useState<string[]>([]); const [fontSize,setFontSize]=useState('16px'); const [fontFamily,setFontFamily]=useState('Inter'); const [loading,setLoading]=useState(false); const [error,setError]=useState(''); const [accountLoading,setAccountLoading]=useState(false);
   const [mediaOpen,setMediaOpen]=useState(false); const [mediaInput,setMediaInput]=useState(''); const [uploading,setUploading]=useState(false); const fileRef=useRef<HTMLInputElement|null>(null); const [platformOpen,setPlatformOpen]=useState(false);
-  const brandPrimary=String(brandTheme?.primary_color||'#111827'); const brandSecondary=String(brandTheme?.secondary_color||brandPrimary); const brandBackground=String(brandTheme?.background_color||'#ffffff'); const brandText=String(brandTheme?.text_color||'#111827'); const brandLogo=String(brandTheme?.logo_url||''); const brandFont=String(brandTheme?.font_family||'Inter');
+  const brandPrimary=String(brandTheme?.primary_color||'#111827'); const brandSecondary=String(brandTheme?.secondary_color||brandPrimary); const brandBackground=String(brandTheme?.background_color||'#ffffff'); const brandText=String(brandTheme?.text_color||'#111827'); const brandLogo=verifiedCompanyLogo(brandTheme); const brandFont=String(brandTheme?.font_family||'Inter');
 
   useEffect(()=>{if(!open)return; const initial=existing?.caption_html ? cleanGeneratedHtml(existing.caption_html) : cleanPublishedHtml(piece?.bodyHtml||`<p>${(piece?.bodyText||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>`); setHtml(initial); setTitle(existing?.title||piece?.title||''); setMediaUrl(existing?.media_url||piece?.mediaUrl||''); setMediaType(existing?.media_type||piece?.mediaType||''); const dt=existing?.scheduled_at?new Date(existing.scheduled_at):new Date(Date.now()+3600000); setDate(dt.toLocaleDateString('en-CA')); setTime(dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hour12:false})); setTimezone(existing?.timezone||Intl.DateTimeFormat().resolvedOptions().timeZone||'Asia/Kolkata'); setFontFamily(existing?.editor_settings?.fontFamily||brandFont||'Inter'); setFontSize(existing?.editor_settings?.fontSize||'16px'); setSelected(existing?.platforms?.map((x:any)=>x.account_id||x.social_account_id).filter(Boolean)||[]); setError(''); void loadAccounts(); // eslint-disable-line react-hooks/exhaustive-deps
   },[open,existing?.id,piece?.id]);
@@ -40,7 +41,8 @@ export default function ScheduleComposer({open,onClose,projectId,piece,sourceJob
   const accountByProvider=useMemo(()=>{const map=new Map<string,Account>(); for(const a of connectedAccounts){if(!map.has(a.provider)) map.set(a.provider,a);} return map;},[connectedAccounts]);
   const toggle=(id:string)=>setSelected(v=>v.includes(id)?v.filter(x=>x!==id):[...v,id]);
   const exec=(cmd:string,value?:string)=>{document.execCommand(cmd,false,value);const el=document.getElementById('schedule-rich-editor');if(el)setHtml(el.innerHTML);};
-  const savedBrand=existing?.editor_settings?.brand_theme||existing?.editor_settings?.brandTheme||null;
+  const rawSavedBrand=existing?.editor_settings?.brand_theme||existing?.editor_settings?.brandTheme||null;
+  const savedBrand=rawSavedBrand&&typeof rawSavedBrand==='object'?{...rawSavedBrand,logo_url:verifiedCompanyLogo(rawSavedBrand)||brandLogo}:null;
 
   function safeFileName(value:string){return (value||'sparrow-post').replace(/[^a-z0-9-_]+/gi,'-').replace(/^-+|-+$/g,'').slice(0,80)||'sparrow-post';}
   function downloadText(){
@@ -75,7 +77,7 @@ export default function ScheduleComposer({open,onClose,projectId,piece,sourceJob
         <section className="schedule-ref-editor">
           <label className="schedule-ref-label">Post to</label>
           <div className="schedule-postto-wrap">
-            <button type="button" className={`schedule-postto ${platformOpen?'is-open':''}`} onClick={()=>setPlatformOpen(v=>!v)} aria-expanded={platformOpen}><span className="schedule-postto-copy"><strong>{selectedAccounts.length ? `${selectedAccounts.length} ${selectedAccounts.length===1?'destination':'destinations'} selected` : 'Choose publishing destinations'}</strong><small>{selectedAccounts.length ? selectedAccounts.map(a=>providerLabels[a.provider]||a.provider).join(' · ') : 'Select the accounts you want Sparrow by TechBliss to publish to'}</small></span><span className="schedule-postto-chevron">⌄</span></button>
+            <button type="button" className={`schedule-postto ${platformOpen?'is-open':''}`} onClick={()=>setPlatformOpen(v=>!v)} aria-expanded={platformOpen}><span className="schedule-postto-copy"><strong>{selectedAccounts.length ? `${selectedAccounts.length} ${selectedAccounts.length===1?'destination':'destinations'} selected` : 'Choose publishing destinations'}</strong><small>{selectedAccounts.length ? selectedAccounts.map(a=>providerLabels[a.provider]||a.provider).join(' · ') : 'Select the accounts you want Sparrow to publish to'}</small></span><span className="schedule-postto-chevron">⌄</span></button>
             {platformOpen&&<div className="schedule-platform-menu">
               {accountLoading?<div className="schedule-menu-empty">Loading your social accounts…</div>:<>
                 <div className="schedule-menu-title"><span>Publishing destinations</span><small>Select one or more connected accounts</small></div>

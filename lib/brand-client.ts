@@ -2,10 +2,32 @@
 // Before this, the header, store and dashboard each fetched on their own and the header
 // re-fetched every time the theme changed, which hit the rate limit (HTTP 429) and left
 // the logo/colours empty.
+import { BRAND_LOGO_SOURCE_VERSION } from './constants';
+
 export type BrandAppearance = Record<string, unknown>;
 
 const inflight = new Map<string, Promise<BrandAppearance | null>>();
 const done = new Map<string, BrandAppearance | null>();
+
+export function verifiedCompanyLogo(theme: unknown): string {
+  const record = (theme || {}) as Record<string, unknown>;
+  if (record.logo_source_version !== BRAND_LOGO_SOURCE_VERSION) return '';
+  const value = String(record.logo_url || '').trim();
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
+export function withVerifiedCompanyLogo(theme: unknown): BrandAppearance {
+  const record = (theme || {}) as Record<string, unknown>;
+  return {
+    ...record,
+    logo_url: verifiedCompanyLogo(record),
+  };
+}
 
 function normaliseHex(value: unknown): string {
   const raw = String(value || '').trim().toLowerCase();
@@ -26,13 +48,12 @@ function isNearWhite(value: unknown): boolean {
 
 export function brandThemeComplete(theme: unknown): boolean {
   const t = (theme || {}) as Record<string, unknown>;
-  const logo = String(t.logo_url || '').trim();
   const primary = String(t.primary_color || '').trim();
   const secondary = String(t.secondary_color || '').trim();
   const background = String(t.background_color || '').trim();
   const text = String(t.text_color || '').trim();
 
-  if (!logo || !primary || !secondary || !background || !text) return false;
+  if (t.logo_source_version !== BRAND_LOGO_SOURCE_VERSION || !primary || !secondary || !background || !text) return false;
 
   // A previous scraper version could incorrectly store theme-color (#fff) as
   // the primary brand colour. If both primary and background are effectively
@@ -45,11 +66,18 @@ export function brandThemeComplete(theme: unknown): boolean {
 }
 
 export function mergeTheme(current: unknown, fetched: unknown): BrandAppearance {
-  return Object.entries({ ...((current || {}) as BrandAppearance), ...((fetched || {}) as BrandAppearance) })
+  const currentTheme = (current || {}) as BrandAppearance;
+  const fetchedTheme = (fetched || {}) as BrandAppearance;
+  const merged = Object.entries({ ...currentTheme, ...fetchedTheme })
     .reduce<BrandAppearance>((acc, [key, value]) => {
       if (value !== null && value !== undefined && String(value).trim() !== '') acc[key] = value;
       return acc;
     }, {});
+  if (typeof fetchedTheme.logo_source_version === 'number') {
+    merged.logo_url = String(fetchedTheme.logo_url || '');
+    merged.logo_source_version = fetchedTheme.logo_source_version;
+  }
+  return merged;
 }
 
 export function fetchBrandAppearance(url: string, refresh = false): Promise<BrandAppearance | null> {

@@ -397,7 +397,7 @@ export default function CreateTools() {
     <div className={`company-workspace ${hasCompany ? 'reference-app ' : ''}${styles.page}${hasCompany ? '' : ' workspace-personal'}`}>
       <CompanyHeader />
       {!hasCompany && <header className={styles.header}>
-        <Link className={styles.brand} href="/dashboard">Sparrow by TechBliss</Link>
+        <Link className={styles.brand} href="/dashboard">Sparrow</Link>
         <nav className={styles.headerActions} aria-label="Workspace navigation">
           <Link className={styles.headerLink} href="/dashboard">All companies</Link>
         </nav>

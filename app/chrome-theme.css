@@ -29,7 +29,7 @@ html body .company-workspace .company-shell-header .company-shell-brand,
 html body .company-workspace .company-shell-header .company-shell-wordmark { color: var(--ch-ink) !important; }
 html body .sparrow-account-header .sparrow-mark { background: var(--ch-ink) !important; color: #fff !important; }
 html body .company-workspace .company-shell-header .company-shell-logo {
-  background: #fff !important; border: 1px solid rgb(28 24 34 / 10%) !important; box-shadow: 0 3px 10px rgb(28 24 34 / 8%) !important;
+  background: transparent !important; border: 0 !important; box-shadow: none !important;
 }
 /* account button + avatar */
 html body .dashboard-v6-header .account-trigger,

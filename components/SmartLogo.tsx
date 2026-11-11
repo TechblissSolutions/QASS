@@ -44,13 +44,38 @@ export default function SmartLogo({ src, alt = '', className = '', fallback = ''
       if (!ctx) return;
       ctx.drawImage(img, 0, 0, width, height);
       const data = ctx.getImageData(0, 0, width, height).data;
+      const cornerSamples = [
+        [0, 0],
+        [width - 1, 0],
+        [0, height - 1],
+        [width - 1, height - 1],
+      ].map(([x, y]) => {
+        const i = (y * width + x) * 4;
+        return [data[i], data[i + 1], data[i + 2], data[i + 3]];
+      });
+      const opaqueCorners = cornerSamples.filter(([, , , alpha]) => alpha > 220);
+      const cornersAreUniform =
+        opaqueCorners.length === cornerSamples.length &&
+        opaqueCorners.every((corner) =>
+          corner.slice(0, 3).every((channel, index) =>
+            Math.abs(channel - opaqueCorners[0][index]) < 36,
+          ),
+        );
+      const background = cornersAreUniform
+        ? [0, 1, 2].map((channel) =>
+            Math.round(opaqueCorners.reduce((sum, corner) => sum + corner[channel], 0) / opaqueCorners.length),
+          )
+        : null;
       let minX = width, minY = height, maxX = -1, maxY = -1;
       for (let y = 0; y < height; y += 1) {
         for (let x = 0; x < width; x += 1) {
           const i = (y * width + x) * 4;
           const a = data[i + 3];
           const r = data[i], g = data[i + 1], b = data[i + 2];
-          const visible = a > 18 && !(r > 246 && g > 246 && b > 246);
+          const differsFromBackground = background
+            ? Math.hypot(r - background[0], g - background[1], b - background[2]) > 30
+            : !(r > 246 && g > 246 && b > 246);
+          const visible = a > 18 && differsFromBackground;
           if (visible) { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); }
         }
       }

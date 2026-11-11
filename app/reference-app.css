@@ -43,7 +43,7 @@
 .company-workspace.reference-app .company-shell-inner-minimal { min-height: 60px; padding: 6px clamp(14px, 2.2vw, 28px); }
 .company-workspace.reference-app .company-shell-brand,
 .company-workspace.reference-app .company-shell-wordmark { color: var(--ds-ink, #1f1b24) !important; }
-.company-workspace.reference-app .company-shell-logo { border: 1px solid var(--ds-line, #ece5dc) !important; border-radius: 9px !important; background: #fff !important; }
+.company-workspace.reference-app .company-shell-logo { border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; }
 .company-workspace.reference-app > .company-sidebar {
   position: sticky !important;
   top: 16px !important;
@@ -222,4 +222,27 @@ html[data-scrolled] body .company-workspace.reference-app > .company-shell-heade
   .company-workspace.reference-app .company-shell-brand { max-width: calc(100% - 96px); }
   .company-workspace.reference-app .company-selection-link { width: 44px; min-height: 44px; justify-content: center; padding: 0; }
   .company-workspace.reference-app .company-selection-link span { display: none; }
+}
+
+/* Company marks should sit directly on the page, not inside bordered tiles. */
+.company-shell-logo,
+.switcher-logo,
+.dashboard-v6-logo-large,
+.profile-company-logo,
+.profile-brand-logo,
+.brand-data-page .brand-identity-logo {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.company-workspace.reference-app .company-shell-logo {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.company-shell-logo .smart-logo,
+.switcher-logo .smart-logo,
+.dashboard-v6-logo-large .smart-logo,
+.brand-data-page .brand-identity-logo .smart-logo {
+  padding: 0 !important;
 }

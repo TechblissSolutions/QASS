@@ -5,7 +5,7 @@ export interface Profile {
 }
 export interface BrandTheme {
   primary_color: string; secondary_color: string; background_color: string;
-  text_color: string; logo_url: string; font_family: string;
+  text_color: string; logo_url: string; font_family: string; logo_source_version?: number;
 }
 export interface Prefs { platforms: string[]; goal: string; tone: string; style: string; extra: string; }
 export interface Piece {

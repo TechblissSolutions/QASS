@@ -26,6 +26,7 @@ import {
   fetchBrandAppearance,
   brandThemeComplete,
   mergeTheme,
+  verifiedCompanyLogo,
 } from '@/lib/brand-client';
 
 // How long the tunnel plays, at minimum, every time the dashboard opens (ms).
@@ -313,7 +314,7 @@ export default function WorkspaceHome() {
           href="/"
           className="dashboard-v6-brand"
         >
-          Sparrow by TechBliss
+          Sparrow
         </a>
 
         <div className="dashboard-v6-header-center">
@@ -383,7 +384,7 @@ export default function WorkspaceHome() {
 
               <small>
                 Start with the company website and
-                Sparrow by TechBliss will build the workspace.
+                Sparrow will build the workspace.
               </small>
             </button>
           ) : (
@@ -398,8 +399,7 @@ export default function WorkspaceHome() {
                 const theme =
                   (project.brand_theme || {}) as BrandTheme;
 
-                const logo =
-                  String(theme.logo_url || '').trim();
+                const logo = verifiedCompanyLogo(theme);
 
                 const primary =
                   String(

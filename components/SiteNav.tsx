@@ -30,9 +30,9 @@ export default function SiteNav({ current }: { current?: 'login' | 'signup' }) {
 
   return (
     <header className="sn">
-      <Link href="/" className="sn-brand" aria-label="Sparrow by TechBliss home">
+      <Link href="/" className="sn-brand" aria-label="Sparrow home">
         <span className="sn-mark" aria-hidden="true"><i /><i /><i /></span>
-        <span>Sparrow <small>by TechBliss</small></span>
+        <span>Sparrow</span>
       </Link>
       <nav className="sn-links" aria-label="Main">
         <Link href="/" aria-current={path === '/' ? 'page' : undefined}>Home</Link>

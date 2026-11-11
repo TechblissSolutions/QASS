@@ -34,6 +34,7 @@ import StoreLoading from '@/components/StoreLoading';
 import CompanyHeader from '@/components/CompanyHeader';
 
 import SmartLogo from '@/components/SmartLogo';
+import { verifiedCompanyLogo, withVerifiedCompanyLogo } from '@/lib/brand-client';
 import ScheduleComposer from '@/components/ScheduleComposer';
 
 import { getSupabaseClient } from '@/lib/supabase';
@@ -441,7 +442,7 @@ export default function StudioPage() {
 
   const {s,set,pieces,piece,ready,loadProjectJob,loadProject}=useStore();const router=useRouter();const toast=useToast();
 
-  const[filter,setFilter]=useState('all');const[studioPlatforms,setStudioPlatforms]=useState<string[]>(s.prefs.platforms||['Instagram','LinkedIn']);const[studioGoal,setStudioGoal]=useState(s.prefs.goal||'Brand / Product Awareness');const[studioTone,setStudioTone]=useState(s.prefs.tone||'Professional');const[studioStyle,setStudioStyle]=useState(s.prefs.style||STYLES[0]);const[studioExtra,setStudioExtra]=useState(s.prefs.extra||'');const[generateBusy,setGenerateBusy]=useState(false);const[search,setSearch]=useState('');const[pollError,setPollError]=useState('');const[pollErrorCount,setPollErrorCount]=useState(0);const[retryBusy,setRetryBusy]=useState(false);
+  const[filter,setFilter]=useState('all');const[studioPlatforms,setStudioPlatforms]=useState<string[]>([]);const[studioGoal,setStudioGoal]=useState('');const[studioTone,setStudioTone]=useState('');const[studioStyle,setStudioStyle]=useState('');const[studioExtra,setStudioExtra]=useState('');const[generateBusy,setGenerateBusy]=useState(false);const[search,setSearch]=useState('');const[pollError,setPollError]=useState('');const[pollErrorCount,setPollErrorCount]=useState(0);const[retryBusy,setRetryBusy]=useState(false);
 
   const[viewId,setViewId]=useState<string|null>(null);
 
@@ -459,7 +460,7 @@ const openSched = (id: string) => { setSchedId(id); };
 
 
 
-  useEffect(()=>{ if(s.projectId){ setStudioPlatforms(s.prefs.platforms||['Instagram','LinkedIn']); setStudioGoal(s.prefs.goal||'Brand / Product Awareness'); setStudioTone(s.prefs.tone||'Professional'); setStudioStyle(s.prefs.style||STYLES[0]); setStudioExtra(s.prefs.extra||''); } },[s.projectId]);
+  useEffect(()=>{ if(s.projectId){ setStudioPlatforms([]); setStudioGoal(''); setStudioTone(''); setStudioStyle(''); setStudioExtra(''); } },[s.projectId]);
 
 
 
@@ -829,7 +830,7 @@ const openSched = (id: string) => { setSchedId(id); };
 
         prompt: spec.prompt, media_type: spec.type, aspect_ratio: spec.ratio,
 
-        brand_theme: s.brandTheme || {}, include_logo: true,
+        brand_theme: withVerifiedCompanyLogo(s.brandTheme), include_logo: Boolean(verifiedCompanyLogo(s.brandTheme)),
 
       };
 
@@ -885,7 +886,7 @@ const openSched = (id: string) => { setSchedId(id); };
 
   const startGeneration=async()=>{
 
-    if(generateBusy || !studioPlatforms.length)return;
+    if(generateBusy || !studioPlatforms.length || !studioGoal || !studioTone || !studioStyle)return;
 
     setGenerateBusy(true); setPollError('');
 
@@ -1333,13 +1334,9 @@ const formatEditor = (command: string, value?: string) => {
       <div className="studio-options-head">
         <div className="studio-options-intro">
           <span className="studio-options-kicker"><i aria-hidden="true" /> STUDIO <span>·</span> CONTENT BRIEF</span>
-          <h1>Choose what Sparrow by TechBliss should create.</h1>
+          <h1>Choose what Sparrow should create.</h1>
           <p>Set the channels and point of view for your next review-ready draft.</p>
         </div>
-        <button className="btn btn-primary studio-generate-action" onClick={startGeneration} disabled={generateBusy||!studioPlatforms.length}>
-          {generateBusy?'Starting…':'Generate content'}
-          {!generateBusy && <span aria-hidden="true">↗</span>}
-        </button>
       </div>
 
       <div className="studio-options-grid">
@@ -1374,14 +1371,21 @@ const formatEditor = (command: string, value?: string) => {
           </div>
         </div>
 
-        <div className="studio-option-block"><label htmlFor="studio-goal">Content goal</label><select id="studio-goal" className="select" value={studioGoal} onChange={e=>setStudioGoal(e.target.value)}><option>Brand / Product Awareness</option><option>Engagement</option></select></div>
+        <div className="studio-option-block"><label htmlFor="studio-goal">Content goal</label><select id="studio-goal" className="select" required value={studioGoal} onChange={e=>setStudioGoal(e.target.value)}><option value="" disabled>Select a goal</option><option>Brand / Product Awareness</option><option>Engagement</option></select></div>
 
-        <div className="studio-option-block"><label htmlFor="studio-tone">Brand tone</label><select id="studio-tone" className="select" value={studioTone} onChange={e=>setStudioTone(e.target.value)}><option>Professional</option><option>Friendly</option></select></div>
+        <div className="studio-option-block"><label htmlFor="studio-tone">Brand tone</label><select id="studio-tone" className="select" required value={studioTone} onChange={e=>setStudioTone(e.target.value)}><option value="" disabled>Select a tone</option><option>Professional</option><option>Friendly</option></select></div>
 
-        <div className="studio-option-block"><label htmlFor="studio-style">Writing style</label><select id="studio-style" className="select" value={studioStyle} onChange={e=>setStudioStyle(e.target.value)}>{STYLES.map(x=><option key={x}>{x}</option>)}</select></div>
+        <div className="studio-option-block"><label htmlFor="studio-style">Writing style</label><select id="studio-style" className="select" required value={studioStyle} onChange={e=>setStudioStyle(e.target.value)}><option value="" disabled>Select a writing style</option>{STYLES.map(x=><option key={x}>{x}</option>)}</select></div>
 
         <div className="studio-option-block studio-option-wide"><label htmlFor="studio-extra">Additional instructions</label><textarea id="studio-extra" className="textarea" rows={2} value={studioExtra} onChange={e=>setStudioExtra(e.target.value)} placeholder="Optional: campaigns, facts, offers, locations, or constraints." /></div>
 
+      </div>
+
+      <div className="studio-options-actions">
+        <button className="btn btn-primary studio-generate-action" onClick={startGeneration} disabled={generateBusy||!studioPlatforms.length||!studioGoal||!studioTone||!studioStyle}>
+          {generateBusy?'Starting…':'Generate content'}
+          {!generateBusy && <span aria-hidden="true">↗</span>}
+        </button>
       </div>
 
     </section>
@@ -1505,7 +1509,7 @@ const formatEditor = (command: string, value?: string) => {
 
               <div className="piece-preview">
 
-                <SocialMock piece={p} company={company} logo={String(s.brandTheme?.logo_url || '')} brandTheme={s.brandTheme || undefined} media={mediaState[p.id] || (p.mediaUrl ? {url:p.mediaUrl,type:p.mediaType} : undefined)} onGenerate={()=>void generateMedia(p)} busy={Boolean(mediaState[p.id]?.busy)} />
+                <SocialMock piece={p} company={company} logo={verifiedCompanyLogo(s.brandTheme)} brandTheme={s.brandTheme || undefined} media={mediaState[p.id] || (p.mediaUrl ? {url:p.mediaUrl,type:p.mediaType} : undefined)} onGenerate={()=>void generateMedia(p)} busy={Boolean(mediaState[p.id]?.busy)} />
 
               </div>
 

@@ -11,13 +11,13 @@ import { getAccessToken } from '@/lib/auth';
 const PLANS = [
   {
     key: 'starter', pill: 'FREE', name: 'Starter', big: 'Free', sub: '1 saved company',
-    desc: 'For trying Sparrow by TechBliss with one company.', lead: 'Included:',
+    desc: 'For trying Sparrow with one company.', lead: 'Included:',
     items: ['1 saved company', 'Full initial content generation', 'Company analysis and Brand DNA', 'Studio and calendar workspace'],
   },
   {
     key: 'pro', pill: 'PRO', name: 'Pro', big: 'Coming soon', sub: 'Up to 5 saved companies', featured: true,
     desc: 'For teams creating and iterating content.', lead: 'Everything in Starter, plus:',
-    items: ['Up to 5 saved companies', 'Regenerate and improve content', 'All current Sparrow by TechBliss features', 'Ready for future publishing integrations'],
+    items: ['Up to 5 saved companies', 'Regenerate and improve content', 'All current Sparrow features', 'Ready for future publishing integrations'],
   },
   {
     key: 'owner', pill: 'OWNER', name: 'Owner', big: 'By invitation', sub: 'Unlimited companies',
@@ -72,7 +72,7 @@ export default function Pricing() {
       <AuthScene />
       <div className="pz-wrap">
         <header className="pz-nav">
-          <a href="/" className="pz-brand" aria-label="Sparrow by TechBliss home">Sparrow <small>by TechBliss</small></a>
+          <a href="/" className="pz-brand" aria-label="Sparrow home">Sparrow</a>
           <nav className="pz-links" aria-label="Main">
             <a href="/">Home</a>
             <a href="/pricing" aria-current="page">Pricing</a>
@@ -86,7 +86,7 @@ export default function Pricing() {
 
         <header className="pz-head">
           <div>
-            <span className="pz-kicker">SPARROW BY TECHBLISS PLANS</span>
+            <span className="pz-kicker">SPARROW PLANS</span>
             <h1 aria-label="Choose how you want to work."><Words text="Choose how you want to work." /></h1>
             <p>Start free. Upgrade when you need more companies and regeneration.</p>
           </div>

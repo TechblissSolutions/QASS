@@ -2,6 +2,7 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
+import { BRAND_LOGO_SOURCE_VERSION } from '@/lib/constants';
 
 import {
   apiGuard,
@@ -15,6 +16,7 @@ import {
 
 const DEFAULTS = {
   logo_url: '',
+  logo_source_version: BRAND_LOGO_SOURCE_VERSION,
   primary_color: '',
   secondary_color: '',
   background_color: '',
@@ -437,6 +439,7 @@ export async function GET(req: NextRequest) {
     if (
       cached &&
       typeof cached === 'object' &&
+      (cached as Record<string, unknown>).logo_source_version === BRAND_LOGO_SOURCE_VERSION &&
       isUsableLogoUrl(
         (cached as Record<string, unknown>).logo_url,
       )
@@ -559,6 +562,51 @@ export async function GET(req: NextRequest) {
     const stylesheetText =
       cssParts.join('');
 
+    const siteOrigin = new URL(url).origin;
+    const headerScriptUrls = [
+      ...html.matchAll(/<script\b[^>]*>/gi),
+    ]
+      .map((match) => parseAttributes(match[0]).src || '')
+      .filter(Boolean)
+      .map((src) => {
+        try {
+          return new URL(src, url);
+        } catch {
+          return null;
+        }
+      })
+      .filter((scriptUrl): scriptUrl is URL =>
+        Boolean(
+          scriptUrl &&
+          scriptUrl.origin === siteOrigin &&
+          /(?:^|\/)(?:layout|header|custom|main|theme|navigation|nav|app)(?:\.[a-z0-9_-]+|[-_][a-z0-9_-]+)?\.js$/i.test(scriptUrl.pathname)
+        ),
+      )
+      .slice(0, 5);
+
+    const headerScriptParts = await Promise.all(
+      headerScriptUrls.map(async (scriptUrl) => {
+        try {
+          if (await isPrivateHost(scriptUrl.toString())) return '';
+          const scriptResponse = await fetchPublicResource(scriptUrl.toString(), {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (compatible; SparrowBrandTheme/1.0)',
+              Accept: 'application/javascript,text/javascript,*/*;q=0.1',
+            },
+            signal: AbortSignal.timeout(5000),
+          });
+          if (!scriptResponse.ok) return '';
+          return new TextDecoder().decode(
+            await readResponseLimited(scriptResponse, 512 * 1024),
+          ).slice(0, 512 * 1024);
+        } catch {
+          return '';
+        }
+      }),
+    );
+
+    const logoSource = `${html}\n${headerScriptParts.join('\n')}`;
+
     /* ============================================================
        LOGO EXTRACTION
        ============================================================ */
@@ -566,7 +614,7 @@ export async function GET(req: NextRequest) {
     const candidates: LogoCandidate[] = [];
 
     const headerMatches = [
-      ...html.matchAll(
+      ...logoSource.matchAll(
         /<(header|nav)\b[\s\S]*?<\/\1>/gi,
       ),
     ];
@@ -604,6 +652,10 @@ export async function GET(req: NextRequest) {
           .trim()
           .toLowerCase()
       : '';
+    const identityWords = [
+      ...hostnameWords,
+      ...(pageTitle.match(/[a-z0-9]{4,}/g) || []),
+    ].filter((word) => !/^(official|welcome|homepage|website|solutions|services|company|about|contact|home)$/.test(word));
 
     /*
      * ------------------------------------------------------------
@@ -611,7 +663,7 @@ export async function GET(req: NextRequest) {
      * ------------------------------------------------------------
      */
 
-    for (const match of html.matchAll(
+    for (const match of logoSource.matchAll(
       /<img\b[^>]*>/gi,
     )) {
       const tag = match[0];
@@ -619,31 +671,40 @@ export async function GET(req: NextRequest) {
       const attrs =
         parseAttributes(tag);
 
-      const raw =
-        attrs['src'] ||
-        attrs['data-src'] ||
-        attrs['data-lazy-src'] ||
-        attrs['data-original'] ||
-        (
-          attrs['srcset'] ||
-          attrs['data-srcset'] ||
-          attrs['data-lazy-srcset'] ||
-          ''
-        )
-          .split(',')
-          .map((part) =>
-            part
-              .trim()
-              .split(/\s+/)[0],
-          )
-          .find(Boolean) ||
-        '';
-
-      const src =
-        makeAbsoluteUrl(
-          raw,
-          url,
+      const sourceSet = [
+        attrs['srcset'],
+        attrs['data-srcset'],
+        attrs['data-lazy-srcset'],
+      ]
+        .filter(Boolean)
+        .flatMap((value) =>
+          value!.split(',').map((part) => part.trim().split(/\s+/)[0]),
         );
+      const rawSources = [
+        attrs['src'],
+        attrs['data-src'],
+        attrs['data-lazy-src'],
+        attrs['data-original'],
+        attrs['data-original-src'],
+        attrs['data-lazy'],
+        attrs['data-img'],
+        attrs['data-url'],
+        ...sourceSet,
+      ].filter(Boolean);
+      const usableSources = rawSources
+        .map((raw) => makeAbsoluteUrl(raw!, url))
+        .filter((candidate) => isUsableLogoUrl(candidate));
+      const src = usableSources
+        .sort((a, b) => {
+          const sourceScore = (value: string) => {
+            let score = 0;
+            if (/\blogo\b|wordmark|branding/i.test(value)) score += 20;
+            if (hostname && value.toLowerCase().includes(hostname)) score += 8;
+            if (/\.svg(?:[?#]|$)/i.test(value)) score += 3;
+            return score;
+          };
+          return sourceScore(b) - sourceScore(a);
+        })[0] || '';
 
       if (!src) {
         continue;
@@ -664,12 +725,12 @@ export async function GET(req: NextRequest) {
 
       const contextEnd =
         Math.min(
-          html.length,
+          logoSource.length,
           tagIndex + 1800,
         );
 
       const context =
-        html
+        logoSource
           .slice(
             contextStart,
             contextEnd,
@@ -683,6 +744,8 @@ export async function GET(req: NextRequest) {
           attrs['alt'] || '',
           attrs['title'] || '',
           attrs['name'] || '',
+          attrs['itemprop'] || '',
+          attrs['aria-label'] || '',
           src,
         ].join(' ');
 
@@ -736,14 +799,47 @@ export async function GET(req: NextRequest) {
           headerHtml &&
           headerHtml.includes(tag),
         );
-
+      const lowerHtml = logoSource.toLowerCase();
+      const anchorStart = lowerHtml.lastIndexOf('<a', tagIndex);
+      const previousAnchorEnd = lowerHtml.lastIndexOf('</a>', tagIndex);
+      const anchorEnd = lowerHtml.indexOf('</a>', tagIndex);
+      const anchorTagEnd = anchorStart >= 0 ? logoSource.indexOf('>', anchorStart) : -1;
+      const anchorTag = anchorStart > previousAnchorEnd && anchorTagEnd >= 0 && anchorEnd >= 0
+        ? logoSource.slice(anchorStart, anchorTagEnd + 1)
+        : '';
+      const anchorHref = parseAttributes(anchorTag).href || '';
+      let isHomeLink = anchorHref === '/';
+      if (anchorHref && !isHomeLink) {
+        try {
+          const target = new URL(anchorHref, url);
+          const site = new URL(url);
+          isHomeLink = target.origin === site.origin && target.pathname === '/';
+        } catch {
+          isHomeLink = false;
+        }
+      }
+      const hasLogoName = /\blogo\b/i.test(`${attrs['class'] || ''} ${attrs['id'] || ''} ${src}`);
+      const isHeaderLogoContainer =
+        /class\s*=\s*["'][^"']*(?:header|nav)[^"']*logo|class\s*=\s*["'][^"']*logo[^"']*(?:header|nav)/i.test(context);
       const isExplicitSiteLogo =
         /(?:site|company|website|main|header)[-_ ]?logo/i.test(
           hayLower,
         ) ||
-        /wordmark|masthead|site[-_ ]?title|navbar[-_ ]?brand/i.test(
+        /\blogo\b/i.test(attrs['itemprop'] || '') ||
+        /wordmark|masthead|site[-_ ]?title|navbar[-_ ]?brand|brand[-_ ]?mark/i.test(
           hayLower,
-        );
+        ) ||
+        (isHeaderLogoContainer && /\blogo(?:[-_.]\d+)?(?:[./?]|$)/i.test(src)) ||
+        (isInsideHeader && isHomeLink && hasLogoName);
+      const imageLabel = `${attrs['alt'] || ''} ${attrs['title'] || ''}`.toLowerCase();
+      const matchesCompanyIdentity = identityWords.some((word) => imageLabel.includes(word));
+
+      // Being in a header is not enough: headers also contain product photos,
+      // campaign artwork, and customer logos. Require an explicit logo marker
+      // or image text that identifies the company.
+      if (!isExplicitSiteLogo && !matchesCompanyIdentity) {
+        continue;
+      }
 
       /*
        * If the image is in a partner/client area and it is not
@@ -814,15 +910,11 @@ export async function GET(req: NextRequest) {
       ) {
         score += 12;
       }
+      if (isHeaderLogoContainer && hasLogoName) {
+        score += 60;
+      }
 
-      if (
-        /\blogo\b/i.test(
-          [
-            attrs['alt'] || '',
-            attrs['title'] || '',
-          ].join(' '),
-        )
-      ) {
+      if (matchesCompanyIdentity) {
         score += 15;
       }
 
@@ -936,7 +1028,7 @@ export async function GET(req: NextRequest) {
             match[1],
           );
 
-        const walk =
+        const findOrganizationLogo =
           (
             node: unknown,
           ): string => {
@@ -954,8 +1046,13 @@ export async function GET(req: NextRequest) {
                 unknown
               >;
 
-            const logo =
-              obj.logo;
+            const types = Array.isArray(obj['@type'])
+              ? obj['@type'].filter((value): value is string => typeof value === 'string')
+              : [obj['@type']].filter((value): value is string => typeof value === 'string');
+            const isOrganization = types.some((type) =>
+              /organization|corporation|localbusiness|store|professionalservice|educationalorganization|governmentorganization|medicalorganization|sportsorganization|ngo/i.test(type),
+            );
+            const logo = isOrganization ? obj.logo : null;
 
             if (
               typeof logo ===
@@ -984,14 +1081,24 @@ export async function GET(req: NextRequest) {
               ).url;
             }
 
+            if (
+              logo &&
+              typeof logo === 'object' &&
+              typeof (
+              logo as Record<string, unknown>
+              ).contentUrl === 'string'
+            ) {
+              return String((logo as Record<string, unknown>).contentUrl);
+            }
+
             for (
               const value of
-                Object.values(
-                  obj,
-                )
+              Object.values(
+                obj,
+              )
             ) {
               const found =
-                walk(value);
+              findOrganizationLogo(value);
 
               if (found) {
                 return found;
@@ -1003,7 +1110,7 @@ export async function GET(req: NextRequest) {
 
         const src =
           makeAbsoluteUrl(
-            walk(json),
+            findOrganizationLogo(json),
             url,
           );
 
@@ -1024,112 +1131,6 @@ export async function GET(req: NextRequest) {
         /*
          * Ignore malformed JSON-LD.
          */
-      }
-    }
-
-    /*
-     * ------------------------------------------------------------
-     * LINK ICONS
-     * ------------------------------------------------------------
-     */
-
-    for (const match of html.matchAll(
-      /<link\b[^>]*>/gi,
-    )) {
-      const attrs =
-        parseAttributes(
-          match[0],
-        );
-
-      const rel = (
-        attrs['rel'] || ''
-      ).toLowerCase();
-
-      const src =
-        makeAbsoluteUrl(
-          attrs['href'] || '',
-          url,
-        );
-
-      if (!src) {
-        continue;
-      }
-
-      if (
-        !isUsableLogoUrl(
-          src,
-        )
-      ) {
-        continue;
-      }
-
-      if (
-        rel.includes(
-          'apple-touch-icon',
-        )
-      ) {
-        candidates.push({
-          src,
-          score: 4,
-          reason:
-            'apple touch icon',
-        });
-      } else if (
-        rel.includes('icon')
-      ) {
-        candidates.push({
-          src,
-          score: 2,
-          reason:
-            'site icon',
-        });
-      }
-    }
-
-    /*
-     * ------------------------------------------------------------
-     * OPEN GRAPH IMAGE
-     * ------------------------------------------------------------
-     *
-     * OG image is intentionally very low priority.
-     */
-
-    for (const match of html.matchAll(
-      /<meta\b[^>]*>/gi,
-    )) {
-      const attrs =
-        parseAttributes(
-          match[0],
-        );
-
-      if (
-        (
-          attrs['property'] ||
-          ''
-        ).toLowerCase() !==
-        'og:image'
-      ) {
-        continue;
-      }
-
-      const src =
-        makeAbsoluteUrl(
-          attrs['content'] || '',
-          url,
-        );
-
-      if (
-        src &&
-        isUsableLogoUrl(
-          src,
-        )
-      ) {
-        candidates.push({
-          src,
-          score: 1,
-          reason:
-            'Open Graph image',
-        });
       }
     }
 
@@ -1167,23 +1168,6 @@ export async function GET(req: NextRequest) {
           candidate.src;
 
         break;
-      }
-    }
-
-    /*
-     * ------------------------------------------------------------
-     * FINAL FAVICON FALLBACK
-     * ------------------------------------------------------------
-     */
-
-    if (!logo) {
-      try {
-        logo =
-          'https://www.google.com/s2/favicons?domain=' +
-          new URL(url).hostname +
-          '&sz=128';
-      } catch {
-        logo = '';
       }
     }
 
