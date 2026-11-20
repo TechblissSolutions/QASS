@@ -466,7 +466,6 @@ html body .company-workspace .studio-generation-progress > * {
   border-radius: 999px !important;
   background: linear-gradient(90deg, var(--ds-accent-dark), var(--ds-accent)) !important;
 }
-
 html body .company-workspace .platform-tabs { gap: 8px; }
 html body .company-workspace .platform-tabs .platform-tab {
   border: 1px solid var(--ds-line) !important;

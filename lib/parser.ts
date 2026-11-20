@@ -230,6 +230,24 @@ function splitH(html: string, section: string, channel: string): Piece[] {
   wrap.innerHTML = cleanDash(html);
   const cards: Piece[] = [];
   const headings = wrap.querySelectorAll('h1, h2, h3, h4');
+  if (section.toLowerCase() === 'blogs' || /blog|video/i.test(channel)) {
+    const titleElement = wrap.querySelector('h1, h2, h3, h4');
+    const title = cleanDash(titleElement?.textContent?.trim() || 'Generated Blog');
+    titleElement?.remove();
+    const bodyHtml = cleanDash(wrap.innerHTML);
+    const bodyText = cleanDash(htmlToText(bodyHtml));
+    if (!bodyText) return [];
+    return [{
+      id: `${section}-${channel.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-1`,
+      section,
+      channel: cleanDash(channel),
+      format: '',
+      title,
+      bodyHtml,
+      bodyText,
+      wordCount: bodyText.split(/\s+/).filter(Boolean).length,
+    }];
+  }
   if (headings.length > 0) {
     headings.forEach((hEl, idx) => {
       const title = cleanDash(hEl.textContent?.trim() || `${section} Content ${idx + 1}`);

@@ -2,7 +2,6 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { normaliseUrl } from './utils';
 
 let browserClient: SupabaseClient | null = null;
-let browserStorageMode: 'local' | 'session' | null = null;
 
 const PERSISTENCE_KEY = 'sparrow_auth_persistence';
 
@@ -17,7 +16,30 @@ function browserStorage(): Storage | undefined {
   return window.localStorage;
 }
 
-/** Configure the login persistence chosen by the user before the browser client is created. */
+const browserStorageAdapter: Storage = {
+  get length() {
+    return browserStorage()?.length ?? 0;
+  },
+  clear() {
+    browserStorage()?.clear();
+  },
+  key(index: number) {
+    return browserStorage()?.key(index) ?? null;
+  },
+  getItem(key: string) {
+    return browserStorage()?.getItem(key) ?? null;
+  },
+  setItem(key: string, value: string) {
+    const storage = browserStorage();
+    if (!storage) throw new Error('Browser storage is unavailable.');
+    storage.setItem(key, value);
+  },
+  removeItem(key: string) {
+    browserStorage()?.removeItem(key);
+  },
+};
+
+/** Configure the storage used for the next authentication session. */
 export function setAuthPersistence(rememberMe: boolean) {
   if (typeof window === 'undefined') return;
   try {
@@ -37,8 +59,6 @@ export function setAuthPersistence(rememberMe: boolean) {
       window.sessionStorage.setItem(PERSISTENCE_KEY, 'session');
     }
   } catch { /* storage may be unavailable; Supabase will still attempt its default */ }
-  browserClient = null;
-  browserStorageMode = null;
 }
 
 export function clearAuthPersistence() {
@@ -47,8 +67,6 @@ export function clearAuthPersistence() {
     window.localStorage.removeItem(PERSISTENCE_KEY);
     window.sessionStorage.removeItem(PERSISTENCE_KEY);
   } catch { /* ignore */ }
-  browserClient = null;
-  browserStorageMode = null;
 }
 
 export function getSupabaseClient(accessToken?: string): SupabaseClient | null {
@@ -60,18 +78,15 @@ export function getSupabaseClient(accessToken?: string): SupabaseClient | null {
   // the user's "Remember me" choice: localStorage survives browser restarts;
   // sessionStorage survives refresh/navigation in the current tab only.
   if (typeof window !== 'undefined' && !accessToken) {
-    const storage = browserStorage();
-    const mode: 'local' | 'session' = storage === window.sessionStorage ? 'session' : 'local';
-    if (!browserClient || browserStorageMode !== mode) {
+    if (!browserClient) {
       browserClient = createClient(url, key, {
         auth: {
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
-          storage,
+          storage: browserStorageAdapter,
         },
       });
-      browserStorageMode = mode;
     }
     return browserClient;
   }
@@ -180,6 +195,27 @@ export async function listJobs(projectId: string, accessToken?: string, limit = 
   const supabase = getSupabaseClient(accessToken); if (!supabase) return [];
   const { data, error } = await supabase.from('jobs').select(jobSelect).eq('project_id', projectId).order('started_at', { ascending: false }).limit(limit);
   if (error) throw error; return (data || []) as JobRow[];
+}
+
+export async function listAllJobs(projectId: string, accessToken?: string) {
+  const supabase = getSupabaseClient(accessToken); if (!supabase) return [];
+  const pageSize = 500;
+  const jobs: JobRow[] = [];
+  let offset = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from('jobs')
+      .select(jobSelect)
+      .eq('project_id', projectId)
+      .order('started_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    const page = (data || []) as JobRow[];
+    jobs.push(...page);
+    if (page.length < pageSize) return jobs;
+    offset += pageSize;
+  }
 }
 
 export async function getJob(id: string, accessToken?: string) {

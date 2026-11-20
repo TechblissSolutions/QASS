@@ -23,6 +23,40 @@ describe('parser', () => {
     expect(cards[0]).toEqual(expect.objectContaining({ channel: 'LinkedIn', title: 'Post one', bodyText: 'Hello world.' }));
   });
 
+  test('splitIntoCards keeps each generated social post in its own complete card', () => {
+    const posts = Array.from({ length: 5 }, (_, index) =>
+      `<article class="media-card"><div class="media-card-head"><h4>Post ${index + 1}</h4></div><div class="formatted-content"><p>Complete caption ${index + 1}.</p><p>Closing line ${index + 1}.</p></div></article>`
+    ).join('');
+    const html = `<div class="platform-block"><div class="platform-title"><h3>Instagram</h3></div>${posts}</div>`;
+    const cards = splitIntoCards(html, 'social', 'Social');
+
+    expect(cards).toHaveLength(5);
+    cards.forEach((card, index) => {
+      expect(card.title).toBe(`Post ${index + 1}`);
+      expect(card.bodyText).toContain(`Complete caption ${index + 1}.`);
+      expect(card.bodyText).toContain(`Closing line ${index + 1}.`);
+    });
+  });
+
+  test('keeps a nested blog article complete in one card', () => {
+    const html = `<div class="platform-block">
+      <div class="platform-title"><h3>Blog &amp; video</h3></div>
+      <div class="formatted-content">
+        <h1>Complete article</h1>
+        <p>Opening paragraph.</p>
+        <section><h2>Key section</h2><p>Middle paragraph.</p><div><h3>Nested section</h3><p>Nested paragraph.</p></div></section>
+        <p>Closing paragraph.</p>
+      </div>
+    </div>`;
+    const cards = splitIntoCards(html, 'blogs', 'Blog & video');
+    expect(cards).toHaveLength(1);
+    expect(cards[0].title).toBe('Complete article');
+    expect(cards[0].bodyText).toContain('Opening paragraph.');
+    expect(cards[0].bodyText).toContain('Middle paragraph.');
+    expect(cards[0].bodyText).toContain('Nested paragraph.');
+    expect(cards[0].bodyText).toContain('Closing paragraph.');
+  });
+
   test('parseLiveViewHtml rejects error and waiting pages', () => {
     expect(parseLiveViewHtml('<html><title>Internal Server Error</title></html>')).toBeNull();
     expect(parseLiveViewHtml('<div class="waiting">Waiting...</div>')).toBeNull();

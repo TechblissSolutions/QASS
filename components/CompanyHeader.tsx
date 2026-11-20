@@ -44,9 +44,9 @@ export default function CompanyHeader() {
   const onPrimary = 'var(--client-on-primary, #fff)';
   const href = (route: string) => `${route}?project=${encodeURIComponent(s.projectId || '')}${s.jobRowId && route === '/studio' ? `&job=${encodeURIComponent(s.jobRowId)}` : ''}`;
   const historyHref = `/dashboard/project/${encodeURIComponent(s.projectId)}`;
-  const nav = [['Studio', '/studio'], ['Create', '/create'], ['Schedule', '/calendar'], ['History', historyHref]] as const;
+  const nav = [['Studio', '/studio'], ['Library', '/library'], ['Create', '/create'], ['Schedule', '/calendar'], ['History', historyHref]] as const;
   const active = (route: string) => route.startsWith('/dashboard/project') ? pathname.startsWith('/dashboard/project') : pathname === route;
-  const referenceLayout = pathname === '/create' || pathname === '/studio' || pathname === '/calendar' || pathname.startsWith('/dashboard/project/');
+  const referenceLayout = pathname === '/create' || pathname === '/studio' || pathname === '/library' || pathname === '/calendar' || pathname.startsWith('/dashboard/project/');
   return <>
     <BrandTheme />
     <header className="company-shell-header" aria-label="Company workspace header">
@@ -68,7 +68,7 @@ export default function CompanyHeader() {
       <div className="company-sidebar-logo company-sidebar-sparrow-mark"><span className="landing-mark" aria-hidden="true"><i /><i /><i /></span></div>
       <div className="company-sidebar-name company-shell-wordmark">Sparrow</div>
       <nav>
-        {nav.map(([label, route]) => <Link key={label} className={active(route) ? 'active' : ''} href={route.startsWith('/dashboard/project') ? route : href(route)}><span className="sidebar-nav-icon">{label === 'Studio' ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.7 6.3L20 11l-6.3 1.7L12 19l-1.7-6.3L4 11l6.3-1.7L12 3Z" /></svg> : label === 'Create' ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5h8l4 4v11H6z" /><path d="M14 4.5v4h4M9 14h6M9 17h4" /></svg> : label === 'Schedule' ? <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M7 3.5v4M17 3.5v4M3.5 9.5h17" /></svg> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7.5a7 7 0 1 1-1.1 8.1" /><path d="M7 3.5v4h4" /><path d="M17 16.5v4h-4" /></svg>}</span><strong>{label}</strong></Link>)}
+        {nav.map(([label, route]) => <Link key={label} className={active(route) ? 'active' : ''} href={route.startsWith('/dashboard/project') ? route : href(route)}><span className="sidebar-nav-icon">{label === 'Studio' ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.7 6.3L20 11l-6.3 1.7L12 19l-1.7-6.3L4 11l6.3-1.7L12 3Z" /></svg> : label === 'Library' ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 5.5h6a3 3 0 0 1 3 3v11a3 3 0 0 0-3-3h-6zM19.5 5.5h-3a3 3 0 0 0-3 3v11a3 3 0 0 1 3-3h3z" /><path d="M7 9h3M16 9h1" /></svg> : label === 'Create' ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5h8l4 4v11H6z" /><path d="M14 4.5v4h4M9 14h6M9 17h4" /></svg> : label === 'Schedule' ? <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M7 3.5v4M17 3.5v4M3.5 9.5h17" /></svg> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7.5a7 7 0 1 1-1.1 8.1" /><path d="M7 3.5v4h4" /><path d="M17 16.5v4h-4" /></svg>}</span><strong>{label}</strong></Link>)}
       </nav>
       {referenceLayout && <div className="company-sidebar-profile"><span>PROFILE</span><AccountMenu kinetic /></div>}
     </aside>
